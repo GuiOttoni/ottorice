@@ -10,6 +10,7 @@ using OttoRice.AppRegistry.Reloaders;
 using OttoRice.Common;
 using System.Net.Http;
 using OttoRice.Features.BackupRestore;
+using OttoRice.Features.ThemeEditor;
 using OttoRice.Features.ThemeImport;
 using OttoRice.Features.ThemeInstall;
 using OttoRice.Features.ThemeInstall.Steps;
@@ -84,6 +85,7 @@ public partial class App : Application
         services.AddTransient<InstallViewModel>();
         services.AddTransient<ThemeControlViewModel>();
         services.AddTransient<BackupsViewModel>();
+        services.AddTransient<ThemeEditorViewModel>();
         services.AddTransient<MainViewModel>();
 
         services.AddTransient<InstallPipeline>(sp => new InstallPipeline(
