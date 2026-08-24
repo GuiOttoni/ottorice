@@ -24,6 +24,7 @@ configs/zed/settings.json                    tema + fonte do Zed
 configs/fastfetch/config.jsonc               módulos do fastfetch
 configs/flow_launcher/settings.json          hotkey/idioma/tema do Flow Launcher
 configs/ohmyposh/catppuccin-mocha.omp.json   prompt do Oh My Posh
+configs/windhawk/start-menu-styler.yaml      settings do Windows 11 Start Menu Styler (Windhawk)
 assets/wallpaper.png, assets/preview.png     gerados nesta sessão (gradiente + glow)
 ```
 
@@ -78,16 +79,29 @@ e `windows-11-notification-center-styler` — os targets `configure_mod` deste m
 - **Escrita no windhawk-cli exige elevação (UAC)** — confirmado em testes reais nesta sessão
   (leitura funciona sem elevação; `mod install`/`mod settings set` retornam "Acesso negado"
   sem admin). Pra não pedir um UAC por mod, o OttoRice agrupa todas as chamadas dos três
-  mods num único script `.cmd` temporário e roda **um só** prompt elevado pra ele.
-- **Sem preset Catppuccin real**: os temas embutidos no Taskbar Styler (FrostyGlass,
-  RosePine, DockLike, Squircle...) não têm um "Catppuccin" exato — o mais próximo,
-  RosePine, é uma paleta diferente. Por isso os targets aqui só instalam/habilitam os mods
-  (`settings` vazio) em vez de forçar um tema que não bateria com o resto do desktop; escolha
-  visualmente pela galeria do próprio mod (link no README de cada um, via `windhawk-cli mod
-  show <id>`) se quiser ir além do padrão.
-- Se quiser customizar via manifesto, `settings` aceita pares chave/valor validados contra
-  o schema do próprio mod antes de escrever (chave desconhecida = erro, não quebra nada
-  silenciosamente), ex.: `"settings": { "theme": "FrostyGlass" }`.
+  mods num único script PowerShell (`-EncodedCommand`, base64 UTF-16LE) e roda **um só**
+  prompt elevado pra ele — cada valor de settings vira um literal de string entre aspas
+  simples do PowerShell, não uma linha de shell interpolada, então CSS/JS de verdade (com
+  `&`, `|`, `"`, `%`, quebras de linha) passa sem precisar banir nenhum caractere.
+- **Reinstalar reseta os settings pro default** (confirmado em teste real: um `mod install`
+  sobre um mod já presente apaga customizações anteriores) — por isso o OttoRice só chama
+  `mod install` pra mods que ainda não estão instalados (checado sem elevação via
+  `mod list --json` antes de montar o script elevado); um mod já presente só recebe
+  `mod settings set`.
+- **Dois jeitos de configurar um mod pelo manifesto:**
+  1. `"settings"` inline — pares chave/valor simples, ex.: `{ "theme": "FrostyGlass" }`.
+  2. `"source"` apontando pra um YAML **no mesmo formato que a própria UI do Windhawk usa no
+     "modo textual"** dos settings do mod (`WindhawkSettingsFlattener` faz a conversão pra
+     chave/valor "flat" que o `windhawk-cli` espera, ex.: `controlStyles[0].target`). É o
+     usado aqui: `configs/windhawk/start-menu-styler.yaml` define
+     `theme: 'Down Aero'` pro Start Menu Styler — um dos temas embutidos no mod, mais
+     neutro/translúcido, sem forçar uma cor que não bateria com o resto da paleta Mocha.
+     `settings` inline tem prioridade sobre o YAML quando os dois definem a mesma chave.
+- **Taskbar Styler e Notification Center Styler** ficam só instalados/habilitados (sem
+  `settings`/`source`) — os temas embutidos no Taskbar Styler (FrostyGlass, RosePine,
+  DockLike, Squircle...) não têm um "Catppuccin" exato, e forçar um que não bate ficaria
+  pior que deixar no padrão. Escolha visualmente pela galeria do próprio mod
+  (`windhawk-cli mod show <id>` lista os temas com link de preview) se quiser ir além.
 
 ### Flow Launcher — por que não tem um tema Catppuccin pronto
 

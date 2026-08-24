@@ -28,15 +28,6 @@ public static partial class ManifestValidator
     [GeneratedRegex(@"^[A-Za-z0-9_.\[\]-]+$")]
     private static partial Regex WindhawkSettingsKeyPattern();
 
-    /// <summary>
-    /// Sem `&amp;|&lt;&gt;^"%` (metacaracteres do cmd.exe) nem controle/quebra de linha — os
-    /// valores acabam interpolados num script .cmd rodado elevado
-    /// (<c>ConfigureWindhawkModsStep</c>). Mesmo raciocínio do <see cref="WingetIdPattern"/>:
-    /// dado vindo de um tema de terceiros nunca entra numa linha de comando sem checagem.
-    /// </summary>
-    [GeneratedRegex("""[&|<>^"%\r\n\x00]""")]
-    private static partial Regex WindhawkUnsafeValueCharsPattern();
-
     public static IReadOnlyList<string> Validate(RiceManifest manifest)
     {
         var errors = new List<string>();
@@ -75,17 +66,28 @@ public static partial class ManifestValidator
                 errors.Add($"{label}: ação '{target.Action}' não permitida para '{target.App}' " +
                            $"(permitidas: {string.Join(", ", definition.AllowedActions)}).");
 
-            // "configure_mod" (mods Windhawk) não copia arquivo — não tem source. "settings"
-            // é opcional: sem settings, só instala/habilita o mod com os valores default (ou
-            // os que o usuário já tiver escolhido antes na galeria de temas do próprio mod).
+            // "configure_mod" (mods Windhawk): "source" é opcional — um YAML com os settings
+            // do mod no mesmo formato da UI do Windhawk (ver WindhawkSettingsFlattener),
+            // achatado em pares chave/valor. "settings" inline continua aceito, some/mescla
+            // com o que vier do YAML. Sem nenhum dos dois, só instala/habilita o mod com os
+            // valores default (ou os que o usuário já tiver escolhido na galeria do mod).
             if (target.Action == "configure_mod")
             {
+                if (!string.IsNullOrWhiteSpace(target.Source) && !IsSafeRelativeSource(target.Source))
+                    errors.Add($"{label}: source '{target.Source}' deve ser um caminho relativo dentro do repo do tema.");
+
                 foreach (var (key, value) in target.Settings ?? [])
                 {
                     if (!WindhawkSettingsKeyPattern().IsMatch(key))
                         errors.Add($"{label}: chave de settings inválida: '{key}'.");
-                    if (WindhawkUnsafeValueCharsPattern().IsMatch(value ?? ""))
-                        errors.Add($"{label}: valor de settings['{key}'] contém caractere não permitido.");
+                    // Sem denylist de caracteres: a execução (ConfigureWindhawkModsStep) passa
+                    // cada valor como literal de string do PowerShell (aspas simples, só ' é
+                    // escapado), não interpolado numa linha de shell — CSS/JS de verdade
+                    // (com &, |, ", %, quebras de linha) precisa passar sem ser bloqueado.
+                    if ((value ?? "").Contains('\0'))
+                        errors.Add($"{label}: valor de settings['{key}'] contém byte nulo.");
+                    if ((value ?? "").Length > 100_000)
+                        errors.Add($"{label}: valor de settings['{key}'] excede o tamanho máximo (100.000 caracteres).");
                 }
             }
             else if (!IsSafeRelativeSource(target.Source))

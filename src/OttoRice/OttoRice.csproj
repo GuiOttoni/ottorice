@@ -31,5 +31,8 @@
     <PackageReference Include="Serilog.Extensions.Logging" Version="9.0.2" />
     <PackageReference Include="Serilog.Sinks.Debug" Version="3.0.0" />
     <PackageReference Include="Serilog.Sinks.File" Version="7.0.0" />
+    <!-- Só pra ler os arquivos de settings dos mods do Windhawk (formato YAML da própria
+         UI do Windhawk) — nenhum outro config do OttoRice é parseado, só copiado. -->
+    <PackageReference Include="YamlDotNet" Version="18.1.0" />
   </ItemGroup>
 </Project>

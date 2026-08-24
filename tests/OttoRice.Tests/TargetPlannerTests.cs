@@ -176,5 +176,38 @@ public class TargetPlannerTests : IDisposable
         Assert.Equal("FrostyGlass", op.Target.Settings!["theme"]);
     }
 
+    [Fact]
+    public void Configure_mod_with_source_resolves_the_yaml_file_but_still_no_target_path()
+    {
+        WriteThemeFile("configs/windhawk/start-menu-styler.yaml", "theme: 'Down Aero'");
+        var manifest = Manifest(new RiceTarget
+        {
+            App = "windows-11-start-menu-styler",
+            Action = "configure_mod",
+            Source = "configs/windhawk/start-menu-styler.yaml",
+        });
+
+        var plan = _planner.Build(manifest, _themeDir);
+
+        Assert.True(plan.IsSuccess, plan.Error);
+        var op = Assert.Single(plan.Value!);
+        Assert.Equal(
+            Path.Combine(_themeDir, "configs", "windhawk", "start-menu-styler.yaml"), op.SourcePath);
+        Assert.Equal("", op.TargetPath);
+    }
+
+    [Fact]
+    public void Configure_mod_with_missing_source_file_fails()
+    {
+        var manifest = Manifest(new RiceTarget
+        {
+            App = "windows-11-start-menu-styler",
+            Action = "configure_mod",
+            Source = "configs/windhawk/nao-existe.yaml",
+        });
+
+        Assert.False(_planner.Build(manifest, _themeDir).IsSuccess);
+    }
+
     public void Dispose() => Directory.Delete(_dir, recursive: true);
 }

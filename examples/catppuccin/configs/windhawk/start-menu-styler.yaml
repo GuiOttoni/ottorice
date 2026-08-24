@@ -1,0 +1,19 @@
+# Catppuccin Everywhere — Windows 11 Start Menu Styler (Windhawk)
+# Mesmo formato que a UI do Windhawk mostra no "modo textual" (Settings do mod).
+# "Down Aero" é um dos temas embutidos no mod — mais neutro/translúcido, combina com o
+# resto do desktop sem forçar uma cor que não bate com a paleta Mocha.
+theme: 'Down Aero'
+disableNewStartMenuLayout: ''
+styleConstants:
+  - ''
+controlStyles:
+  - target: ''
+    styles:
+      - ''
+themeResourceVariables:
+  - ''
+webContentStyles:
+  - target: ''
+    styles:
+      - ''
+webContentCustomJs: ''

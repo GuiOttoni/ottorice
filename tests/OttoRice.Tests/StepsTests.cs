@@ -206,6 +206,8 @@ public class AppReloaderTests
 
 public class ConfigureWindhawkModsStepTests
 {
+    private const string CliPath = @"C:\Program Files\Windhawk\windhawk-cli.exe";
+
     private static InstallContext Context(params RiceTarget[] targets)
     {
         var context = new InstallContext
@@ -218,12 +220,30 @@ public class ConfigureWindhawkModsStepTests
         return context;
     }
 
+    private static InstallContext ContextWithLog(List<string> log, params RiceTarget[] targets)
+    {
+        var context = new InstallContext
+        {
+            Manifest = new RiceManifest { ThemeId = "t", Name = "T" },
+            ThemeDirectory = Path.GetTempPath(),
+            Progress = log.Add,
+        };
+        foreach (var target in targets)
+            context.Operations.Add(new FileOperation(target, "", ""));
+        return context;
+    }
+
     private static RiceTarget ModTarget(string app = "windows-11-taskbar-styler", string? theme = "FrostyGlass") => new()
     {
         App = app,
         Action = "configure_mod",
         Settings = theme is null ? new() : new() { ["theme"] = theme },
     };
+
+    /// <summary>Stub pra "mod list --json" (leitura sem elevação usada antes de decidir instalar).</summary>
+    private static void StubEmptyModList(IProcessRunner runner) =>
+        runner.RunAsync(CliPath, "mod list --json", Arg.Any<CancellationToken>())
+              .Returns(Task.FromResult(new ProcessResult(0, """{"data":{"mods":[]}}""", "")));
 
     [Fact]
     public async Task No_mod_targets_is_a_noop()
@@ -250,27 +270,15 @@ public class ConfigureWindhawkModsStepTests
         await runner.DidNotReceiveWithAnyArgs().RunElevatedAsync(default!, default!);
     }
 
-    private static InstallContext ContextWithLog(List<string> log, params RiceTarget[] targets)
-    {
-        var context = new InstallContext
-        {
-            Manifest = new RiceManifest { ThemeId = "t", Name = "T" },
-            ThemeDirectory = Path.GetTempPath(),
-            Progress = log.Add,
-        };
-        foreach (var target in targets)
-            context.Operations.Add(new FileOperation(target, "", ""));
-        return context;
-    }
-
     [Fact]
-    public async Task Success_runs_one_elevated_batch_and_starts_windhawk_if_not_running()
+    public async Task Success_runs_one_elevated_powershell_call_and_starts_windhawk_if_not_running()
     {
         var resolver = Substitute.For<IExecutableResolver>();
-        resolver.Resolve("windhawk-cli").Returns(@"C:\Program Files\Windhawk\windhawk-cli.exe");
+        resolver.Resolve("windhawk-cli").Returns(CliPath);
         resolver.Resolve("windhawk").Returns(@"C:\Program Files\Windhawk\windhawk.exe");
         var runner = Substitute.For<IProcessRunner>();
-        runner.RunElevatedAsync("cmd.exe", Arg.Any<string>(), Arg.Any<CancellationToken>())
+        StubEmptyModList(runner);
+        runner.RunElevatedAsync("powershell.exe", Arg.Any<string>(), Arg.Any<CancellationToken>())
               .Returns(Task.FromResult<int?>(0));
         runner.FindProcessIds("windhawk").Returns([]);
 
@@ -281,18 +289,48 @@ public class ConfigureWindhawkModsStepTests
 
         Assert.True(result.IsSuccess);
         await runner.Received(1).RunElevatedAsync(
-            "cmd.exe", Arg.Is<string>(a => a.Contains("/c") && a.Contains(".cmd")), Arg.Any<CancellationToken>());
+            "powershell.exe", Arg.Is<string>(a => a.Contains("-EncodedCommand")), Arg.Any<CancellationToken>());
         Assert.Contains(log, l => l.Contains("configurados"));
         runner.Received(1).StartDetached(@"C:\Program Files\Windhawk\windhawk.exe", Arg.Any<string>());
+    }
+
+    [Fact]
+    public async Task Already_installed_mod_skips_reinstall_but_still_applies_settings()
+    {
+        // Reinstalar um mod já presente reseta os settings dele pro default (confirmado em
+        // teste real) — por isso "mod install" só entra no script pra mods ausentes.
+        var resolver = Substitute.For<IExecutableResolver>();
+        resolver.Resolve("windhawk-cli").Returns(CliPath);
+        var runner = Substitute.For<IProcessRunner>();
+        runner.RunAsync(CliPath, "mod list --json", Arg.Any<CancellationToken>())
+              .Returns(Task.FromResult(new ProcessResult(
+                  0, """{"data":{"mods":[{"id":"windows-11-taskbar-styler"}]}}""", "")));
+
+        string? capturedArgs = null;
+        runner.RunElevatedAsync("powershell.exe", Arg.Do<string>(a => capturedArgs = a), Arg.Any<CancellationToken>())
+              .Returns(Task.FromResult<int?>(0));
+
+        var context = ContextWithLog([], ModTarget());
+        var result = await new ConfigureWindhawkModsStep(resolver, runner).ExecuteAsync(context);
+
+        Assert.True(result.IsSuccess);
+        Assert.NotNull(capturedArgs);
+        // O script vem em -EncodedCommand (base64 UTF-16LE); decodifica pra inspecionar.
+        var b64 = capturedArgs!.Split("-EncodedCommand ")[1].Trim();
+        var script = System.Text.Encoding.Unicode.GetString(Convert.FromBase64String(b64));
+        Assert.DoesNotContain("mod install", script);
+        Assert.Contains("mod settings set", script);
+        Assert.Contains("theme=FrostyGlass", script);
     }
 
     [Fact]
     public async Task Success_does_not_start_windhawk_again_if_already_running()
     {
         var resolver = Substitute.For<IExecutableResolver>();
-        resolver.Resolve("windhawk-cli").Returns(@"C:\Program Files\Windhawk\windhawk-cli.exe");
+        resolver.Resolve("windhawk-cli").Returns(CliPath);
         var runner = Substitute.For<IProcessRunner>();
-        runner.RunElevatedAsync("cmd.exe", Arg.Any<string>(), Arg.Any<CancellationToken>())
+        StubEmptyModList(runner);
+        runner.RunElevatedAsync("powershell.exe", Arg.Any<string>(), Arg.Any<CancellationToken>())
               .Returns(Task.FromResult<int?>(0));
         runner.FindProcessIds("windhawk").Returns([1234]);
 
@@ -307,8 +345,9 @@ public class ConfigureWindhawkModsStepTests
     public async Task Uac_cancelled_is_non_fatal_and_reports_warning()
     {
         var resolver = Substitute.For<IExecutableResolver>();
-        resolver.Resolve("windhawk-cli").Returns(@"C:\Program Files\Windhawk\windhawk-cli.exe");
+        resolver.Resolve("windhawk-cli").Returns(CliPath);
         var runner = Substitute.For<IProcessRunner>();
+        StubEmptyModList(runner);
         runner.RunElevatedAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
               .Returns(Task.FromResult<int?>(null));
 
@@ -321,19 +360,32 @@ public class ConfigureWindhawkModsStepTests
         Assert.Contains(log, l => l.Contains("UAC"));
     }
 
-    [Theory]
-    [InlineData("ok\" & del /f /q C:\\* & \"")]
-    [InlineData("has spaces\r\ninjected")]
-    public async Task Unsafe_settings_value_aborts_before_touching_the_cli(string unsafeValue)
+    [Fact]
+    public async Task Settings_with_shell_metacharacters_pass_through_safely()
     {
+        // Antes bloqueado por um denylist de caracteres de cmd.exe; agora a execução via
+        // PowerShell -EncodedCommand com literal de aspas simples deixa passar CSS/JS de
+        // verdade (com &, |, ", %, quebras de linha) sem precisar banir nada.
         var resolver = Substitute.For<IExecutableResolver>();
+        resolver.Resolve("windhawk-cli").Returns(CliPath);
         var runner = Substitute.For<IProcessRunner>();
+        StubEmptyModList(runner);
 
-        var context = Context(ModTarget(theme: unsafeValue));
+        string? capturedArgs = null;
+        runner.RunElevatedAsync("powershell.exe", Arg.Do<string>(a => capturedArgs = a), Arg.Any<CancellationToken>())
+              .Returns(Task.FromResult<int?>(0));
+
+        var target = ModTarget(theme: null) with
+        {
+            Settings = new() { ["controlStyles[0].styles[0]"] = ".taskbar > div { color: red; } /* 100% & \"quoted\" */" },
+        };
+        var context = ContextWithLog([], target);
         var result = await new ConfigureWindhawkModsStep(resolver, runner).ExecuteAsync(context);
 
-        Assert.True(result.IsSuccess); // melhor esforço: não derruba o pipeline
-        resolver.DidNotReceiveWithAnyArgs().Resolve(default!);
-        await runner.DidNotReceiveWithAnyArgs().RunElevatedAsync(default!, default!);
+        Assert.True(result.IsSuccess);
+        Assert.NotNull(capturedArgs);
+        var b64 = capturedArgs!.Split("-EncodedCommand ")[1].Trim();
+        var script = System.Text.Encoding.Unicode.GetString(Convert.FromBase64String(b64));
+        Assert.Contains(".taskbar > div { color: red; }", script);
     }
 }

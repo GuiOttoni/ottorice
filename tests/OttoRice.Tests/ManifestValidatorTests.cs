@@ -167,8 +167,12 @@ public class ManifestValidatorTests
     [InlineData("ok\" & del /f /q C:\\* & \"")]
     [InlineData("line1\nline2")]
     [InlineData("100% & calc")]
-    public void Configure_mod_with_unsafe_settings_value_fails(string value)
+    [InlineData(".taskbar > div { color: red; }")]
+    public void Configure_mod_settings_value_with_shell_metacharacters_passes(string value)
     {
+        // A execução (ConfigureWindhawkModsStep) passa cada valor como literal de string do
+        // PowerShell, não interpolado numa linha de shell — não há motivo pra banir
+        // caractere nenhum aqui; CSS/JS de verdade precisa passar.
         var manifest = ValidManifest() with
         {
             Targets =
@@ -181,7 +185,43 @@ public class ManifestValidatorTests
                 },
             ],
         };
-        Assert.Contains(ManifestValidator.Validate(manifest), e => e.Contains("valor"));
+        Assert.Empty(ManifestValidator.Validate(manifest));
+    }
+
+    [Fact]
+    public void Configure_mod_settings_value_with_null_byte_fails()
+    {
+        var manifest = ValidManifest() with
+        {
+            Targets =
+            [
+                new RiceTarget
+                {
+                    App = "windows-11-taskbar-styler",
+                    Action = "configure_mod",
+                    Settings = new() { ["theme"] = "a\0b" },
+                },
+            ],
+        };
+        Assert.Contains(ManifestValidator.Validate(manifest), e => e.Contains("nulo"));
+    }
+
+    [Fact]
+    public void Configure_mod_with_yaml_source_validates_path_like_other_targets()
+    {
+        var manifest = ValidManifest() with
+        {
+            Targets =
+            [
+                new RiceTarget
+                {
+                    App = "windows-11-taskbar-styler",
+                    Action = "configure_mod",
+                    Source = "../escape.yaml",
+                },
+            ],
+        };
+        Assert.Contains(ManifestValidator.Validate(manifest), e => e.Contains("source"));
     }
 
     [Fact]

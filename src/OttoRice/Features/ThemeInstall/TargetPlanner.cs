@@ -29,11 +29,25 @@ public sealed class TargetPlanner(
         {
             var app = SupportedApps.All[target.App!];
 
-            // Mods Windhawk não têm source (é config de arquivo nenhum) — settings vêm do
-            // próprio target, lidas direto pelo ConfigureWindhawkModsStep.
+            // Mods Windhawk não copiam arquivo pra lugar nenhum (por isso TargetPath fica
+            // vazio) — mas o "source", se houver, é um YAML de settings que o
+            // ConfigureWindhawkModsStep lê e achata (WindhawkSettingsFlattener). Sem
+            // "source", só os "settings" inline do target (se houver) são usados.
             if (target.Action == "configure_mod")
             {
-                operations.Add(new FileOperation(target, SourcePath: "", TargetPath: ""));
+                if (string.IsNullOrWhiteSpace(target.Source))
+                {
+                    operations.Add(new FileOperation(target, SourcePath: "", TargetPath: ""));
+                    continue;
+                }
+
+                var modSourcePath = Path.GetFullPath(Path.Combine(themeRoot, target.Source));
+                if (!modSourcePath.StartsWith(themeRoot, StringComparison.OrdinalIgnoreCase))
+                    return Fail($"source '{target.Source}' resolve para fora do diretório do tema.");
+                if (!File.Exists(modSourcePath))
+                    return Fail($"settings '{target.Source}' não encontrado no tema.");
+
+                operations.Add(new FileOperation(target, modSourcePath, TargetPath: ""));
                 continue;
             }
 
