@@ -4,7 +4,9 @@
 
 .yasb-bar {
     background-color: rgba(11, 7, 20, 0.92);
-    font-family: "Segoe UI", sans-serif;
+    /* Nerd Font necessária pros glyphs dos widgets (wifi/volume/bateria/power); cai pra
+       Segoe UI normalmente se não estiver instalada, mas os ícones somem/viram caixas. */
+    font-family: "JetBrainsMono NFP", "Segoe UI", sans-serif;
     font-size: 13px;
     color: #D6C9F0;
 }
@@ -45,4 +47,29 @@
 .cpu .icon,
 .memory .icon {
     color: #3C145A;
+}
+
+.taskbar .app-icon {
+    padding: 0 4px;
+}
+
+.wifi .label,
+.volume .label,
+.battery .label {
+    color: #D6C9F0;
+}
+
+.wifi .icon,
+.volume .icon,
+.battery .icon {
+    color: #22D3EE;
+}
+
+.power-menu .label {
+    color: #A78BFA;
+    padding: 0 6px;
+}
+
+.power-menu .label:hover {
+    color: #22D3EE;
 }

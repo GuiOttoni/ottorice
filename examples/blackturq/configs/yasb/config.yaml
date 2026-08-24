@@ -11,6 +11,12 @@ bars:
     alignment:
       position: 'top'
       center: false
+    # windows_app_bar: a barra se registra como AppBar do Windows e reserva a própria
+    # faixa de tela — sem isso o GlazeWM tenta blocar (tiling) a janela do YASB como se
+    # fosse um app comum, esticando-a pra ocupar o monitor inteiro no multi-monitor.
+    window_flags:
+      always_on_top: false
+      windows_app_bar: true
     dimensions:
       width: '100%'
       height: 32

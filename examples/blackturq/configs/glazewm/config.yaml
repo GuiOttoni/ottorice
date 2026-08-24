@@ -7,14 +7,14 @@ general:
   focus_follows_cursor: false
   toggle_workspace_on_refocus: false
 
-# Sem isso, o GlazeWM tenta blocar (tiling) a janela da barra YASB como se fosse uma
-# janela normal — no multi-monitor isso a estica pra ocupar o monitor inteiro em vez de
-# ficar como uma barra fina no topo. `ignore` mantém a janela fora do tiling.
+# O Zebar não vira Windows AppBar sozinho, então precisa ficar fora do tiling (senão o
+# GlazeWM tenta blocá-lo como janela normal). O YASB não entra aqui: com
+# `window_flags.windows_app_bar: true` no config dele, ele mesmo se registra como AppBar
+# do Windows e reserva a própria área de tela — o GlazeWM já respeita isso sem regra.
 window_rules:
   - commands: ['ignore']
-    match_process_name: 'yasb'
-  - commands: ['ignore']
-    match_process_name: 'zebar'
+    match:
+      - window_process: { equals: 'zebar' }
 
 gaps:
   scale_with_dpi: true
