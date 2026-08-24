@@ -108,4 +108,42 @@ public class InstallPipelineTests
         public Task CompensateAsync(InstallContext context) =>
             throw new InvalidOperationException("compensação quebrada");
     }
+
+    [Fact]
+    public void StepNames_exposes_step_names_in_order()
+    {
+        var pipeline = new InstallPipeline([new FakeStep("a"), new FakeStep("b"), new FakeStep("c")]);
+        Assert.Equal(["a", "b", "c"], pipeline.StepNames);
+    }
+
+    [Fact]
+    public async Task Step_state_transitions_report_running_success_and_the_failed_step_stays_failed()
+    {
+        var states = new List<(string Name, InstallStepState State)>();
+        var steps = new[]
+        {
+            new FakeStep("a"),
+            new FakeStep("b", succeeds: false),
+        };
+        var context = new InstallContext
+        {
+            Manifest = new RiceManifest { ThemeId = "t", Name = "T" },
+            ThemeDirectory = Path.GetTempPath(),
+            StepStateChanged = (name, state) => states.Add((name, state)),
+        };
+
+        await new InstallPipeline(steps).RunAsync(context);
+
+        Assert.Equal(
+            [
+                ("a", InstallStepState.Running),
+                ("a", InstallStepState.Success),
+                ("b", InstallStepState.Running),
+                ("b", InstallStepState.Failed),
+                ("a", InstallStepState.Compensated),
+            ],
+            states);
+        // 'b' (o que falhou) nunca vira "Compensated" — fica "Failed" pra indicar a causa.
+        Assert.DoesNotContain(states, s => s.Name == "b" && s.State == InstallStepState.Compensated);
+    }
 }

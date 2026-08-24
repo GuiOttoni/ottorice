@@ -52,6 +52,7 @@ public partial class InstallViewModel(
     public ObservableCollection<string> Log { get; } = [];
     public ObservableCollection<string> AffectedApps { get; } = [];
     public ObservableCollection<string> Dependencies { get; } = [];
+    public ObservableCollection<StepStatusItem> Steps { get; } = [];
 
     public bool HasPreview => FetchedTheme is not null;
     public string ThemeTitle => FetchedTheme is null
@@ -105,6 +106,10 @@ public partial class InstallViewModel(
             foreach (var dep in manifest.Dependencies)
                 Dependencies.Add(dep.WingetId!);
 
+            Steps.Clear();
+            foreach (var name in pipeline.StepNames)
+                Steps.Add(new StepStatusItem(name));
+
             if (manifest.Preview is not null)
             {
                 var previewPath = Path.Combine(FetchedTheme.ThemeDirectory, manifest.Preview);
@@ -146,6 +151,10 @@ public partial class InstallViewModel(
         Log.Clear();
         StatusMessage = $"Instalando '{theme.Manifest.Name}'...";
 
+        Steps.Clear();
+        foreach (var name in pipeline.StepNames)
+            Steps.Add(new StepStatusItem(name));
+
         try
         {
             var context = new InstallContext
@@ -153,6 +162,12 @@ public partial class InstallViewModel(
                 Manifest = theme.Manifest,
                 ThemeDirectory = theme.ThemeDirectory,
                 Progress = Log.Add, // steps continuam no contexto da UI (sem ConfigureAwait(false))
+                StepStateChanged = (name, state) =>
+                {
+                    var item = Steps.FirstOrDefault(s => s.Name == name);
+                    if (item is not null)
+                        item.State = state;
+                },
             };
 
             var result = await pipeline.RunAsync(context, _cts.Token);

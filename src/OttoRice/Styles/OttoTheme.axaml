@@ -19,6 +19,7 @@
     <Color x:Key="AccentDimColor">#CC1530</Color>
     <Color x:Key="GoldColor">#FFB000</Color>
     <Color x:Key="GoldDimColor">#CC8800</Color>
+    <Color x:Key="SuccessColor">#3ECF8E</Color>
 
     <SolidColorBrush x:Key="BgDeepBrush" Color="{StaticResource BgDeepColor}" />
     <SolidColorBrush x:Key="BgPrimaryBrush" Color="{StaticResource BgPrimaryColor}" />
@@ -34,6 +35,7 @@
     <SolidColorBrush x:Key="AccentDimBrush" Color="{StaticResource AccentDimColor}" />
     <SolidColorBrush x:Key="GoldBrush" Color="{StaticResource GoldColor}" />
     <SolidColorBrush x:Key="GoldDimBrush" Color="{StaticResource GoldDimColor}" />
+    <SolidColorBrush x:Key="SuccessBrush" Color="{StaticResource SuccessColor}" />
 
     <FontFamily x:Key="MonoFont">Cascadia Mono,Consolas,Courier New,monospace</FontFamily>
   </Styles.Resources>

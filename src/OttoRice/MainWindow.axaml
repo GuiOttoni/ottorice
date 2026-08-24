@@ -4,6 +4,8 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="using:OttoRice"
         xmlns:backup="using:OttoRice.Features.BackupRestore"
+        xmlns:install="using:OttoRice.Features.ThemeInstall"
+        xmlns:conv="using:OttoRice.Converters"
         mc:Ignorable="d" d:DesignWidth="1000" d:DesignHeight="680"
         x:Class="OttoRice.MainWindow"
         x:DataType="local:MainViewModel"
@@ -31,7 +33,7 @@
 
             <!-- ══ Instalar tema ══════════════════════════════════════════ -->
             <TabItem Header="INSTALAR TEMA">
-                <Grid RowDefinitions="Auto,Auto,Auto,*" Margin="20,16" DataContext="{Binding Install}">
+                <Grid RowDefinitions="Auto,Auto,Auto,Auto,*" Margin="20,16" DataContext="{Binding Install}">
 
                     <StackPanel Grid.Row="0" Spacing="8">
                         <TextBlock Text="REPOSITÓRIO DO TEMA" Classes="eyebrow" />
@@ -87,7 +89,40 @@
                                      Width="180" Height="4" VerticalAlignment="Center" />
                     </StackPanel>
 
-                    <Border Grid.Row="3" Classes="console" Margin="0,16,0,0">
+                    <!-- Visualização gráfica das etapas do pipeline (além do log escrito abaixo) -->
+                    <Border Grid.Row="3" Classes="card" Margin="0,16,0,0" IsVisible="{Binding HasPreview}">
+                        <ItemsControl ItemsSource="{Binding Steps}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <StackPanel Orientation="Horizontal" Spacing="4" />
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="install:StepStatusItem">
+                                    <StackPanel Orientation="Horizontal" Spacing="4">
+                                        <StackPanel Spacing="6" Width="112" HorizontalAlignment="Center">
+                                            <Border Width="26" Height="26" CornerRadius="13"
+                                                    HorizontalAlignment="Center"
+                                                    Background="{DynamicResource BgSecondaryBrush}"
+                                                    BorderThickness="1.5"
+                                                    BorderBrush="{Binding State, Converter={x:Static conv:InstallStepStateToBrushConverter.Instance}}">
+                                                <TextBlock Text="{Binding State, Converter={x:Static conv:InstallStepStateToGlyphConverter.Instance}}"
+                                                           Foreground="{Binding State, Converter={x:Static conv:InstallStepStateToBrushConverter.Instance}}"
+                                                           FontSize="13" FontWeight="Bold"
+                                                           HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                            </Border>
+                                            <TextBlock Text="{Binding Name}" Classes="muted" TextWrapping="Wrap"
+                                                       TextAlignment="Center" />
+                                        </StackPanel>
+                                        <Border Width="20" Height="1.5" VerticalAlignment="Center" Margin="0,0,0,20"
+                                                Background="{DynamicResource BorderBrush2}" />
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </Border>
+
+                    <Border Grid.Row="4" Classes="console" Margin="0,16,0,0">
                         <ScrollViewer>
                             <ItemsControl ItemsSource="{Binding Log}" Margin="12">
                                 <ItemsControl.ItemTemplate>

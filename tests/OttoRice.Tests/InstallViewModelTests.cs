@@ -59,6 +59,43 @@ public class InstallViewModelTests : IDisposable
         Assert.Equal(["GlazeWM v3"], vm.AffectedApps);
         Assert.Equal(["glazewm.glazewm"], vm.Dependencies);
         Assert.True(vm.InstallCommand.CanExecute(null));
+
+        // Visualização gráfica das etapas já aparece no preview, antes de instalar.
+        var step = Assert.Single(vm.Steps);
+        Assert.Equal("noop", step.Name);
+        Assert.Equal(InstallStepState.Pending, step.State);
+    }
+
+    [Fact]
+    public async Task Install_transitions_step_state_to_success()
+    {
+        var fetcher = Substitute.For<IThemeFetcher>();
+        fetcher.FetchAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+               .Returns(Result<FetchedTheme>.Ok(Theme(_dir)));
+
+        var vm = CreateVm(fetcher, pipelineSucceeds: true, out _);
+        vm.ThemeUrl = "https://github.com/owner/repo";
+        await vm.FetchCommand.ExecuteAsync(null);
+        await vm.InstallCommand.ExecuteAsync(null);
+
+        var step = Assert.Single(vm.Steps);
+        Assert.Equal(InstallStepState.Success, step.State);
+    }
+
+    [Fact]
+    public async Task Failed_install_marks_the_failing_step_as_failed()
+    {
+        var fetcher = Substitute.For<IThemeFetcher>();
+        fetcher.FetchAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+               .Returns(Result<FetchedTheme>.Ok(Theme(_dir)));
+
+        var vm = CreateVm(fetcher, pipelineSucceeds: false, out _);
+        vm.ThemeUrl = "https://github.com/owner/repo";
+        await vm.FetchCommand.ExecuteAsync(null);
+        await vm.InstallCommand.ExecuteAsync(null);
+
+        var step = Assert.Single(vm.Steps);
+        Assert.Equal(InstallStepState.Failed, step.State);
     }
 
     [Fact]

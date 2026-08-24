@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
@@ -15,6 +16,9 @@ namespace OttoRice.Features.ThemeInstall;
 /// </summary>
 public sealed class InstallPipeline(IReadOnlyList<IInstallStep> steps, ILogger<InstallPipeline>? logger = null)
 {
+    /// <summary>Nomes dos steps na ordem de execução — pra UI pré-popular a visualização antes de rodar.</summary>
+    public IReadOnlyList<string> StepNames { get; } = [.. steps.Select(s => s.Name)];
+
     public async Task<Result> RunAsync(InstallContext context, CancellationToken ct = default)
     {
         var executed = new Stack<IInstallStep>();
@@ -23,6 +27,7 @@ public sealed class InstallPipeline(IReadOnlyList<IInstallStep> steps, ILogger<I
         {
             Result result;
             logger?.LogInformation("Step '{Step}' iniciado (tema {ThemeId}).", step.Name, context.Manifest.ThemeId);
+            context.StepStateChanged?.Invoke(step.Name, InstallStepState.Running);
             try
             {
                 result = await step.ExecuteAsync(context, ct);
@@ -42,12 +47,14 @@ public sealed class InstallPipeline(IReadOnlyList<IInstallStep> steps, ILogger<I
             if (result.IsSuccess)
             {
                 logger?.LogInformation("Step '{Step}' concluído.", step.Name);
+                context.StepStateChanged?.Invoke(step.Name, InstallStepState.Success);
                 continue;
             }
 
             logger?.LogError("Step '{Step}' falhou: {Error}. Desfazendo alterações...", step.Name, result.Error);
+            context.StepStateChanged?.Invoke(step.Name, InstallStepState.Failed);
             context.Report($"❌ Falha em '{step.Name}'. Desfazendo alterações...");
-            await CompensateAsync(executed, context, logger);
+            await CompensateAsync(executed, context, logger, failedStep: step);
             return Result.Fail(result.Error!);
         }
 
@@ -55,7 +62,7 @@ public sealed class InstallPipeline(IReadOnlyList<IInstallStep> steps, ILogger<I
     }
 
     private static async Task CompensateAsync(
-        Stack<IInstallStep> executed, InstallContext context, ILogger<InstallPipeline>? logger)
+        Stack<IInstallStep> executed, InstallContext context, ILogger<InstallPipeline>? logger, IInstallStep failedStep)
     {
         while (executed.Count > 0)
         {
@@ -64,6 +71,10 @@ public sealed class InstallPipeline(IReadOnlyList<IInstallStep> steps, ILogger<I
             {
                 await step.CompensateAsync(context);
                 logger?.LogInformation("Compensação de '{Step}' concluída.", step.Name);
+                // O step que falhou fica com o estado "Falhou" (X vermelho) — só os que
+                // tinham dado certo antes dele viram "Desfeito" (rollback).
+                if (step != failedStep)
+                    context.StepStateChanged?.Invoke(step.Name, InstallStepState.Compensated);
             }
             catch (Exception ex)
             {

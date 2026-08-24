@@ -18,6 +18,9 @@ public sealed class InstallContext
 
     public Action<string>? Progress { get; init; }
 
+    /// <summary>Notifica transições de estado de um step, pra visualização gráfica na UI.</summary>
+    public Action<string, InstallStepState>? StepStateChanged { get; init; }
+
     public List<FileOperation> Operations { get; } = [];
     public BackupSessionInfo? BackupSession { get; set; }
     public string? PreviousWallpaperPath { get; set; }
