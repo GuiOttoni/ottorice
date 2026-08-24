@@ -1,0 +1,78 @@
+/* Catppuccin Everywhere — YASB Reborn (%USERPROFILE%\.config\yasb\styles.css)
+   Paleta Catppuccin Mocha oficial (https://catppuccin.com/palette). */
+
+.yasb-bar {
+    background-color: rgba(30, 30, 46, 0.92); /* base */
+    /* Nerd Font necessária pros glyphs dos widgets (wifi/volume/bateria/power); cai pra
+       Segoe UI normalmente se não estiver instalada, mas os ícones somem/viram caixas. */
+    font-family: "JetBrainsMono NFP", "Segoe UI", sans-serif;
+    font-size: 13px;
+    color: #cdd6f4; /* text */
+}
+
+.widget {
+    padding: 0 8px;
+}
+
+.widget .label {
+    color: #cdd6f4; /* text */
+    padding: 0 4px;
+}
+
+.glazewm-workspaces .ws-btn {
+    color: #6c7086; /* overlay0 */
+    padding: 0 6px;
+}
+
+.glazewm-workspaces .ws-btn.populated {
+    color: #a6adc8; /* subtext0 */
+}
+
+.glazewm-workspaces .ws-btn.active {
+    color: #cba6f7; /* mauve */
+    font-weight: 600;
+}
+
+.active-window .label {
+    color: #b4befe; /* lavender */
+}
+
+.taskbar .app-icon {
+    padding: 0 4px;
+}
+
+.clock .label {
+    color: #f5c2e7; /* pink */
+    font-weight: 600;
+}
+
+.cpu .label,
+.memory .label {
+    color: #cdd6f4; /* text */
+}
+
+.cpu .icon,
+.memory .icon {
+    color: #89b4fa; /* blue */
+}
+
+.wifi .label,
+.volume .label,
+.battery .label {
+    color: #cdd6f4; /* text */
+}
+
+.wifi .icon,
+.volume .icon,
+.battery .icon {
+    color: #94e2d5; /* teal */
+}
+
+.power-menu .label {
+    color: #f38ba8; /* red */
+    padding: 0 6px;
+}
+
+.power-menu .label:hover {
+    color: #eba0ac; /* maroon */
+}

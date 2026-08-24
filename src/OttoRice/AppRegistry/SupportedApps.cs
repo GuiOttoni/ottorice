@@ -63,6 +63,49 @@ public static class SupportedApps
                 [],
                 new HashSet<string> { "set" },
                 ReloadAction.Wallpaper),
+
+            // Os cinco apps abaixo só aceitam config declarativa (JSON/JSONC) — nenhum deles
+            // é um script executável, ao contrário do $PROFILE do PowerShell (por isso ele
+            // fica de fora da whitelist: um perfil de shell roda código a cada terminal
+            // aberto, violaria a regra "manifesto nunca traz scripts").
+            ["vscode"] = new(
+                "vscode", "VS Code",
+                [@"%APPDATA%\Code\User\settings.json"],
+                new HashSet<string> { "override" },
+                ReloadAction.None,
+                ConfigRoot: @"%APPDATA%\Code\User"),
+
+            ["zed"] = new(
+                "zed", "Zed",
+                [@"%APPDATA%\Zed\settings.json"],
+                new HashSet<string> { "override" },
+                ReloadAction.None,
+                ConfigRoot: @"%APPDATA%\Zed"),
+
+            ["fastfetch"] = new(
+                "fastfetch", "Fastfetch",
+                [@"%APPDATA%\fastfetch\config.jsonc"],
+                new HashSet<string> { "override" },
+                ReloadAction.None,
+                ConfigRoot: @"%APPDATA%\fastfetch"),
+
+            ["flow_launcher"] = new(
+                "flow_launcher", "Flow Launcher",
+                [@"%APPDATA%\FlowLauncher\Settings\Settings.json"],
+                new HashSet<string> { "override" },
+                ReloadAction.None,
+                ConfigRoot: @"%APPDATA%\FlowLauncher\Settings"),
+
+            // Sem ConfigPaths: o oh-my-posh não lê um arquivo de nome/local fixo — o tema
+            // é referenciado por caminho explícito no $PROFILE (--config <path>), que o
+            // OttoRice não edita (é script). Guardamos o tema num diretório próprio do
+            // OttoRice; o usuário aponta o profile pra lá manualmente (ver README do tema).
+            ["oh_my_posh"] = new(
+                "oh_my_posh", "Oh My Posh",
+                [],
+                new HashSet<string> { "override" },
+                ReloadAction.None,
+                ConfigRoot: @"%LOCALAPPDATA%\OttoRice\ohmyposh"),
         };
 
     public static bool IsSupported(string appId) => All.ContainsKey(appId);

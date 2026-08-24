@@ -1,0 +1,11 @@
+{
+    "workbench.colorTheme": "Catppuccin Mocha",
+    "workbench.iconTheme": "catppuccin-mocha",
+    "editor.fontFamily": "'JetBrainsMono NFP', Consolas, 'Courier New', monospace",
+    "editor.fontLigatures": true,
+    "editor.cursorBlinking": "smooth",
+    "editor.smoothScrolling": true,
+    "editor.minimap.enabled": false,
+    "terminal.integrated.fontFamily": "'JetBrainsMono NFP'",
+    "window.titleBarStyle": "custom"
+}

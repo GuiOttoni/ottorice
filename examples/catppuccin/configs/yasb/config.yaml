@@ -1,0 +1,139 @@
+# Catppuccin Everywhere — YASB Reborn (%USERPROFILE%\.config\yasb\config.yaml)
+watch_stylesheet: true
+watch_config: true
+debug: false
+
+bars:
+  status-bar:
+    enabled: true
+    screens: ['*']
+    class_name: 'yasb-bar'
+    alignment:
+      position: 'top'
+      center: false
+    blur_effect:
+      enabled: true
+      acrylic: false
+      dark_mode: true
+      round_corners: false
+    # windows_app_bar: a barra se registra como AppBar do Windows (mesmo mecanismo da
+    # taskbar nativa) e reserva a própria faixa de tela — sem isso o GlazeWM tenta blocar
+    # (tiling) a janela do YASB como se fosse um app comum, esticando-a pra ocupar o
+    # monitor inteiro no multi-monitor (bug real encontrado em dogfooding, ver doc).
+    window_flags:
+      always_on_top: false
+      windows_app_bar: true
+    dimensions:
+      width: '100%'
+      height: 34
+    padding:
+      top: 4
+      left: 10
+      bottom: 0
+      right: 10
+    widgets:
+      left: ['glazewm_workspaces', 'active_window']
+      center: ['clock']
+      right: ['taskbar', 'cpu', 'memory', 'wifi', 'volume', 'battery', 'power_menu']
+
+widgets:
+  # Atenção: o namespace deste widget é 'glazewm.workspaces', não 'yasb.*' como os demais.
+  glazewm_workspaces:
+    type: 'glazewm.workspaces.GlazewmWorkspacesWidget'
+    options:
+      offline_label: 'GlazeWM offline'
+      hide_empty_workspaces: true
+      hide_if_offline: false
+      monitor_exclusive: true
+
+  active_window:
+    type: 'yasb.active_window.ActiveWindowWidget'
+    options:
+      label: '{win[title]}'
+      label_no_window: ''
+      max_length: 60
+      monitor_exclusive: true
+
+  # Substitui a taskbar nativa (oculta pelo OttoRice): mostra os apps abertos direto na
+  # barra do YASB, com ícone e clique pra alternar/minimizar.
+  taskbar:
+    type: 'yasb.taskbar.TaskbarWidget'
+    options:
+      animation:
+        enabled: true
+      icon_size: 16
+      ignore_apps:
+        processes: []
+        titles: []
+        classes: []
+      container_padding:
+        top: 0
+        left: 5
+        bottom: 0
+        right: 5
+
+  clock:
+    type: 'yasb.clock.ClockWidget'
+    options:
+      label: '<span></span> {%a %d %b %H:%M}'
+      label_alt: '{%A, %d %B %Y — %H:%M:%S}'
+
+  cpu:
+    type: 'yasb.cpu.CpuWidget'
+    options:
+      label: 'CPU {info[percent][total]}%'
+      update_interval: 2000
+
+  memory:
+    type: 'yasb.memory.MemoryWidget'
+    options:
+      label: 'RAM {virtual_mem_percent}%'
+      update_interval: 5000
+
+  wifi:
+    type: 'yasb.wifi.WifiWidget'
+    options:
+      label: '<span>󰤨</span> {wifi_name}'
+      label_alt: '{wifi_name} {wifi_strength}%'
+      update_interval: 5000
+      callbacks:
+        on_left: 'exec explorer ms-availablenetworks:'
+        on_right: 'toggle_label'
+
+  volume:
+    type: 'yasb.volume.VolumeWidget'
+    options:
+      label: '<span>{icon}</span> {level}%'
+      label_alt: '{volume}'
+      volume_icons:
+        - ''
+        - ''
+        - ''
+        - ''
+        - ''
+      callbacks:
+        on_right: 'exec cmd.exe /c start ms-settings:sound'
+
+  battery:
+    type: 'yasb.battery.BatteryWidget'
+    options:
+      label: '<span>{icon}</span> {percent}%'
+      label_alt: 'tempo restante: {time_remaining}'
+      charging_options:
+        icon_format: '{charging_icon}'
+
+  power_menu:
+    type: 'yasb.power_menu.PowerMenuWidget'
+    options:
+      label: ''
+      uptime: true
+      blur: true
+      animation_duration: 200
+      button_row: 5
+      buttons:
+        shutdown: ['', 'Desligar']
+        restart: ['', 'Reiniciar']
+        signout: ['󰍃', 'Sair']
+        hibernate: ['', 'Hibernar']
+        sleep: ['⏾', 'Suspender']
+        cancel: ['', 'Cancelar']

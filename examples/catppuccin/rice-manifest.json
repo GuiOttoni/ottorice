@@ -1,0 +1,64 @@
+{
+  "schemaVersion": "1.0",
+  "themeId": "catppuccin",
+  "name": "Catppuccin Everywhere",
+  "author": "ottorice",
+  "preview": "assets/preview.png",
+  "dependencies": [
+    { "wingetId": "glzr-io.glazewm", "minVersion": "3.0.0" },
+    { "wingetId": "AmN.yasb" },
+    { "wingetId": "Microsoft.VisualStudioCode" },
+    { "wingetId": "ZedIndustries.Zed" },
+    { "wingetId": "Fastfetch-cli.Fastfetch" },
+    { "wingetId": "Flow-Launcher.Flow-Launcher" },
+    { "wingetId": "JanDeDobbeleer.OhMyPosh" }
+  ],
+  "targets": [
+    {
+      "app": "glazewm",
+      "action": "override",
+      "source": "configs/glazewm/config.yaml"
+    },
+    {
+      "app": "yasb",
+      "action": "override",
+      "source": "configs/yasb"
+    },
+    {
+      "app": "windows_terminal",
+      "action": "merge_scheme",
+      "source": "configs/wt-scheme.json",
+      "setAsDefault": true
+    },
+    {
+      "app": "vscode",
+      "action": "override",
+      "source": "configs/vscode/settings.json"
+    },
+    {
+      "app": "zed",
+      "action": "override",
+      "source": "configs/zed/settings.json"
+    },
+    {
+      "app": "fastfetch",
+      "action": "override",
+      "source": "configs/fastfetch/config.jsonc"
+    },
+    {
+      "app": "flow_launcher",
+      "action": "override",
+      "source": "configs/flow_launcher/settings.json"
+    },
+    {
+      "app": "oh_my_posh",
+      "action": "override",
+      "source": "configs/ohmyposh/catppuccin-mocha.omp.json"
+    },
+    {
+      "app": "wallpaper",
+      "action": "set",
+      "source": "assets/wallpaper.png"
+    }
+  ]
+}

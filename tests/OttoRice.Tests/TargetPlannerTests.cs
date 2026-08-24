@@ -121,5 +121,39 @@ public class TargetPlannerTests : IDisposable
         Assert.NotEqual(Path.Combine(_fakeUserProfile, ".config", "yasb", "config.yaml"), op.TargetPath);
     }
 
+    [Fact]
+    public void Vscode_file_override_maps_to_registry_config_path()
+    {
+        WriteThemeFile("configs/vscode-settings.json");
+        var manifest = Manifest(new RiceTarget
+        {
+            App = "vscode", Action = "override", Source = "configs/vscode-settings.json",
+        });
+
+        var plan = _planner.Build(manifest, _themeDir);
+
+        Assert.True(plan.IsSuccess, plan.Error);
+        // vscode-settings.json não bate por nome com "settings.json" — cai no ConfigRoot
+        // com o próprio nome, não sobrescreve o settings.json do usuário silenciosamente.
+        Assert.EndsWith(@"Code\User\vscode-settings.json", Assert.Single(plan.Value!).TargetPath);
+    }
+
+    [Fact]
+    public void OhMyPosh_theme_with_no_fixed_config_path_lands_under_its_own_config_root()
+    {
+        // oh_my_posh não tem ConfigPaths (o tema não tem nome/local fixo que a ferramenta
+        // leia sozinha) — deve sempre cair no ConfigRoot próprio do OttoRice.
+        WriteThemeFile("configs/catppuccin.omp.json");
+        var manifest = Manifest(new RiceTarget
+        {
+            App = "oh_my_posh", Action = "override", Source = "configs/catppuccin.omp.json",
+        });
+
+        var plan = _planner.Build(manifest, _themeDir);
+
+        Assert.True(plan.IsSuccess, plan.Error);
+        Assert.EndsWith(@"OttoRice\ohmyposh\catppuccin.omp.json", Assert.Single(plan.Value!).TargetPath);
+    }
+
     public void Dispose() => Directory.Delete(_dir, recursive: true);
 }

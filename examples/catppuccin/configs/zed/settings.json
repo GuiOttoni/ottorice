@@ -1,0 +1,14 @@
+{
+  "theme": "Catppuccin Mocha",
+  "buffer_font_family": "JetBrainsMono NFP",
+  "ui_font_family": "JetBrainsMono NFP",
+  "buffer_font_size": 14,
+  "cursor_blink": false,
+  "vim_mode": false,
+  "tab_bar": {
+    "show": true
+  },
+  "scrollbar": {
+    "show": "never"
+  }
+}

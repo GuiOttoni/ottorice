@@ -76,7 +76,10 @@ public class EndToEndInstallTests : IDisposable
     {
         var planner = new TargetPlanner(
             new WindowsTerminalLocator(Path.Combine(_sandbox, "localappdata")),
-            path => path.Replace("%USERPROFILE%", _fakeUserProfile));
+            path => path
+                .Replace("%USERPROFILE%", _fakeUserProfile)
+                .Replace("%APPDATA%", Path.Combine(_sandbox, "roaming"))
+                .Replace("%LOCALAPPDATA%", Path.Combine(_sandbox, "localappdata")));
 
         IInstallStep[] steps =
         [
@@ -146,6 +149,51 @@ public class EndToEndInstallTests : IDisposable
         Assert.True(File.Exists(Path.Combine(_fakeUserProfile, ".config", "yasb", "config.yaml")));
         _wallpaper.Received(1).Set(Path.Combine(VoidhazeThemeDir, "assets", "wallpaper.png"));
         _taskbar.Received(1).SetAutoHide(true);
+    }
+
+    private static string CatppuccinThemeDir
+    {
+        get
+        {
+            var dir = new DirectoryInfo(AppContext.BaseDirectory);
+            while (dir is not null && !Directory.Exists(Path.Combine(dir.FullName, "examples")))
+                dir = dir.Parent;
+            Assert.NotNull(dir);
+            return Path.Combine(dir!.FullName, "examples", "catppuccin");
+        }
+    }
+
+    /// <summary>
+    /// Terceiro tema de exemplo: cobre os cinco apps novos (vscode, zed, fastfetch,
+    /// flow_launcher, oh_my_posh), todos resolvidos via %APPDATA%/%LOCALAPPDATA%
+    /// (não só %USERPROFILE% como glazewm/yasb).
+    /// </summary>
+    [Fact]
+    public async Task Catppuccin_full_install_writes_every_target_including_the_new_apps()
+    {
+        var manifestJson = await File.ReadAllTextAsync(
+            Path.Combine(CatppuccinThemeDir, ThemeFetcher.ManifestFileName));
+        var manifest = ManifestValidator.Parse(manifestJson);
+        Assert.True(manifest.IsSuccess, manifest.Error);
+
+        var context = new InstallContext { Manifest = manifest.Value!, ThemeDirectory = CatppuccinThemeDir };
+        var result = await BuildPipeline().RunAsync(context);
+
+        Assert.True(result.IsSuccess, result.Error);
+        Assert.True(File.Exists(Path.Combine(_fakeUserProfile, ".glzr", "glazewm", "config.yaml")));
+        Assert.True(File.Exists(Path.Combine(_fakeUserProfile, ".config", "yasb", "config.yaml")));
+        Assert.True(File.Exists(Path.Combine(_sandbox, "roaming", "Code", "User", "settings.json")));
+        Assert.True(File.Exists(Path.Combine(_sandbox, "roaming", "Zed", "settings.json")));
+        Assert.True(File.Exists(Path.Combine(_sandbox, "roaming", "fastfetch", "config.jsonc")));
+        Assert.True(File.Exists(Path.Combine(_sandbox, "roaming", "FlowLauncher", "Settings", "Settings.json")));
+        Assert.True(File.Exists(Path.Combine(
+            _sandbox, "localappdata", "OttoRice", "ohmyposh", "catppuccin-mocha.omp.json")));
+        _wallpaper.Received(1).Set(Path.Combine(CatppuccinThemeDir, "assets", "wallpaper.png"));
+        _taskbar.Received(1).SetAutoHide(true);
+        Assert.Equal(
+            ["glzr-io.glazewm", "AmN.yasb", "Microsoft.VisualStudioCode", "ZedIndustries.Zed",
+             "Fastfetch-cli.Fastfetch", "Flow-Launcher.Flow-Launcher", "JanDeDobbeleer.OhMyPosh"],
+            context.WingetIdsInstalled);
     }
 
     [Fact]

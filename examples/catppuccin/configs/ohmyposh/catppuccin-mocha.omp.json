@@ -1,0 +1,70 @@
+{
+  "$schema": "https://raw.githubusercontent.com/JanDeDobbeleer/oh-my-posh/main/themes/schema.json",
+  "version": 3,
+  "final_space": true,
+  "blocks": [
+    {
+      "type": "prompt",
+      "alignment": "left",
+      "segments": [
+        {
+          "type": "os",
+          "style": "diamond",
+          "leading_diamond": "╭─",
+          "foreground": "#1e1e2e",
+          "background": "#cba6f7",
+          "template": " {{ if .WSL }}WSL at {{ end }}{{.Icon}} "
+        },
+        {
+          "type": "path",
+          "style": "powerline",
+          "powerline_symbol": "",
+          "foreground": "#1e1e2e",
+          "background": "#89b4fa",
+          "properties": {
+            "style": "folder"
+          },
+          "template": " {{ .Path }} "
+        },
+        {
+          "type": "git",
+          "style": "powerline",
+          "powerline_symbol": "",
+          "foreground": "#1e1e2e",
+          "background": "#a6e3a1",
+          "template": " {{ .HEAD }}{{ if .Working.Changed }} {{ .Working.String }}{{ end }} "
+        }
+      ]
+    },
+    {
+      "type": "prompt",
+      "alignment": "right",
+      "segments": [
+        {
+          "type": "time",
+          "style": "diamond",
+          "trailing_diamond": "─╮",
+          "foreground": "#1e1e2e",
+          "background": "#f5c2e7",
+          "properties": {
+            "time_format": "15:04:05"
+          },
+          "template": " {{ .CurrentDate | date .Format }} "
+        }
+      ]
+    },
+    {
+      "type": "prompt",
+      "alignment": "left",
+      "newline": true,
+      "segments": [
+        {
+          "type": "text",
+          "style": "plain",
+          "foreground": "#cdd6f4",
+          "template": "╰─❯"
+        }
+      ]
+    }
+  ]
+}
