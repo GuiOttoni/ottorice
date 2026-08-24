@@ -162,6 +162,64 @@ public class ThemeFetcherTests : IDisposable
     }
 
     [Fact]
+    public async Task Reads_theme_from_local_manifest_file()
+    {
+        var themeDir = Path.Combine(_dir, "tema-json");
+        Directory.CreateDirectory(themeDir);
+        var manifestPath = Path.Combine(themeDir, "rice-manifest.json");
+        await File.WriteAllTextAsync(manifestPath, ValidManifest);
+
+        var handler = new FakeHandler(_ => new HttpResponseMessage(HttpStatusCode.InternalServerError));
+        var result = await Fetcher(handler).FetchAsync(manifestPath);
+
+        Assert.True(result.IsSuccess, result.Error);
+        Assert.Equal("tema-zip", result.Value!.Manifest.ThemeId);
+        // A pasta do arquivo vira a raiz, para os `source` relativos continuarem válidos.
+        Assert.Equal(themeDir, result.Value.ThemeDirectory);
+        Assert.Empty(handler.Urls);
+    }
+
+    [Fact]
+    public async Task Local_manifest_file_can_have_any_json_name()
+    {
+        var themeDir = Path.Combine(_dir, "tema-nome-livre");
+        Directory.CreateDirectory(themeDir);
+        var manifestPath = Path.Combine(themeDir, "meu-tema.json");
+        await File.WriteAllTextAsync(manifestPath, ValidManifest);
+
+        var result = await Fetcher(new FakeHandler(_ => new HttpResponseMessage(HttpStatusCode.OK)))
+            .FetchAsync(manifestPath);
+
+        Assert.True(result.IsSuccess, result.Error);
+    }
+
+    [Fact]
+    public async Task Local_file_that_is_not_json_is_rejected()
+    {
+        var path = Path.Combine(_dir, "config.yaml");
+        await File.WriteAllTextAsync(path, "gaps: 8");
+
+        var result = await Fetcher(new FakeHandler(_ => new HttpResponseMessage(HttpStatusCode.OK)))
+            .FetchAsync(path);
+
+        Assert.False(result.IsSuccess);
+        Assert.Contains(".json", result.Error);
+    }
+
+    [Fact]
+    public async Task Invalid_local_manifest_reports_validation_errors()
+    {
+        var path = Path.Combine(_dir, "ruim.json");
+        await File.WriteAllTextAsync(path, """{ "schemaVersion": "1.0", "themeId": "x", "name": "X", "targets": [] }""");
+
+        var result = await Fetcher(new FakeHandler(_ => new HttpResponseMessage(HttpStatusCode.OK)))
+            .FetchAsync(path);
+
+        Assert.False(result.IsSuccess);
+        Assert.Contains("target", result.Error);
+    }
+
+    [Fact]
     public async Task Local_folder_without_manifest_fails()
     {
         var themeDir = Path.Combine(_dir, "pasta-vazia");

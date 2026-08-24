@@ -72,10 +72,17 @@ public sealed class ThemeFetcher(HttpClient http, string? cacheRootOverride = nu
 
     public async Task<Result<FetchedTheme>> FetchAsync(string repoUrl, CancellationToken ct = default)
     {
-        // Pasta local: como um autor testa o próprio tema antes de publicar no GitHub.
+        // Fontes locais: como um autor testa o próprio tema antes de publicar no GitHub.
+        // Aceita a pasta do tema ou o próprio arquivo de manifesto (.json).
         var local = repoUrl?.Trim().Trim('"');
-        if (!string.IsNullOrEmpty(local) && Directory.Exists(local))
-            return await ReadLocalThemeAsync(local, ct);
+        if (!string.IsNullOrEmpty(local))
+        {
+            if (Directory.Exists(local))
+                return await ReadLocalThemeAsync(local, ct);
+
+            if (File.Exists(local))
+                return await ReadLocalManifestFileAsync(local, ct);
+        }
 
         var parsed = GitHubRepoRef.Parse(repoUrl);
         if (!parsed.IsSuccess)
@@ -124,6 +131,25 @@ public sealed class ThemeFetcher(HttpClient http, string? cacheRootOverride = nu
         {
             File.Delete(zipPath);
         }
+    }
+
+    /// <summary>
+    /// Manifesto local apontado diretamente (qualquer nome .json). A pasta que o contém
+    /// vira a raiz do tema, então os `source` relativos continuam resolvendo igual.
+    /// </summary>
+    private async Task<Result<FetchedTheme>> ReadLocalManifestFileAsync(string manifestPath, CancellationToken ct)
+    {
+        if (!manifestPath.EndsWith(".json", StringComparison.OrdinalIgnoreCase))
+            return Result<FetchedTheme>.Fail("Um arquivo de tema local precisa ser um manifesto .json.");
+
+        var manifest = ManifestValidator.Parse(await File.ReadAllTextAsync(manifestPath, ct));
+        if (!manifest.IsSuccess)
+            return Result<FetchedTheme>.Fail(manifest.Error!);
+
+        var themeDir = Path.GetDirectoryName(Path.GetFullPath(manifestPath))
+            ?? throw new InvalidOperationException($"Não foi possível determinar a pasta de '{manifestPath}'.");
+
+        return Result<FetchedTheme>.Ok(new FetchedTheme(themeDir, manifest.Value!));
     }
 
     private async Task<Result<FetchedTheme>> ReadLocalThemeAsync(string themeDir, CancellationToken ct)

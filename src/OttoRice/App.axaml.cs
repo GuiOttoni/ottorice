@@ -66,6 +66,8 @@ public partial class App : Application
             return http;
         });
         services.AddSingleton<IThemeFetcher>(sp => new ThemeFetcher(sp.GetRequiredService<HttpClient>()));
+        services.AddSingleton<IThemeFilePicker>(_ =>
+            new AvaloniaThemeFilePicker(AvaloniaThemeFilePicker.CurrentMainWindow));
 
         services.AddSingleton<ThemeStateStore>();
         services.AddSingleton<ThemeToggleService>();

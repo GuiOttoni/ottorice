@@ -22,7 +22,8 @@ public partial class InstallViewModel(
     IThemeFetcher fetcher,
     InstallPipeline pipeline,
     InstallHistoryStore history,
-    ThemeStateStore stateStore) : ObservableObject
+    ThemeStateStore stateStore,
+    IThemeFilePicker filePicker) : ObservableObject
 {
     private CancellationTokenSource? _cts;
 
@@ -34,6 +35,7 @@ public partial class InstallViewModel(
     [NotifyCanExecuteChangedFor(nameof(FetchCommand))]
     [NotifyCanExecuteChangedFor(nameof(InstallCommand))]
     [NotifyCanExecuteChangedFor(nameof(CancelCommand))]
+    [NotifyCanExecuteChangedFor(nameof(BrowseCommand))]
     private bool _isBusy;
 
     [ObservableProperty]
@@ -55,6 +57,20 @@ public partial class InstallViewModel(
     public string ThemeTitle => FetchedTheme is null
         ? ""
         : $"{FetchedTheme.Manifest.Name} — por {FetchedTheme.Manifest.Author ?? "desconhecido"}";
+
+    private bool NotBusy() => !IsBusy;
+
+    /// <summary>Escolhe um manifesto no disco e já busca o tema.</summary>
+    [RelayCommand(CanExecute = nameof(NotBusy))]
+    private async Task BrowseAsync()
+    {
+        var manifestPath = await filePicker.PickManifestAsync();
+        if (manifestPath is null)
+            return;
+
+        ThemeUrl = manifestPath;
+        await FetchAsync();
+    }
 
     private bool CanFetch() => !IsBusy && !string.IsNullOrWhiteSpace(ThemeUrl);
 

@@ -37,7 +37,8 @@ public class InstallViewModelTests : IDisposable
             fetcher,
             new InstallPipeline([new NoopStep(pipelineSucceeds)]),
             history,
-            new ThemeStateStore(_dir));
+            new ThemeStateStore(_dir),
+            Substitute.For<IThemeFilePicker>());
     }
 
     [Fact]
@@ -58,6 +59,50 @@ public class InstallViewModelTests : IDisposable
         Assert.Equal(["GlazeWM v3"], vm.AffectedApps);
         Assert.Equal(["glazewm.glazewm"], vm.Dependencies);
         Assert.True(vm.InstallCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public async Task Browse_sets_url_from_picker_and_fetches()
+    {
+        var fetcher = Substitute.For<IThemeFetcher>();
+        fetcher.FetchAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+               .Returns(Result<FetchedTheme>.Ok(Theme(_dir)));
+        var picker = Substitute.For<IThemeFilePicker>();
+        picker.PickManifestAsync().Returns(@"C:\temas\meu\rice-manifest.json");
+
+        var vm = new InstallViewModel(
+            fetcher,
+            new InstallPipeline([new NoopStep()]),
+            new InstallHistoryStore(_dir),
+            new ThemeStateStore(_dir),
+            picker);
+
+        await vm.BrowseCommand.ExecuteAsync(null);
+
+        Assert.Equal(@"C:\temas\meu\rice-manifest.json", vm.ThemeUrl);
+        await fetcher.Received(1).FetchAsync(@"C:\temas\meu\rice-manifest.json", Arg.Any<CancellationToken>());
+        Assert.True(vm.HasPreview);
+    }
+
+    [Fact]
+    public async Task Browse_cancelled_by_user_changes_nothing()
+    {
+        var fetcher = Substitute.For<IThemeFetcher>();
+        var picker = Substitute.For<IThemeFilePicker>();
+        picker.PickManifestAsync().Returns((string?)null);
+
+        var vm = new InstallViewModel(
+            fetcher,
+            new InstallPipeline([new NoopStep()]),
+            new InstallHistoryStore(_dir),
+            new ThemeStateStore(_dir),
+            picker);
+        vm.ThemeUrl = "valor-anterior";
+
+        await vm.BrowseCommand.ExecuteAsync(null);
+
+        Assert.Equal("valor-anterior", vm.ThemeUrl);
+        await fetcher.DidNotReceiveWithAnyArgs().FetchAsync(default!, default);
     }
 
     [Fact]
@@ -105,7 +150,8 @@ public class InstallViewModelTests : IDisposable
             fetcher,
             new InstallPipeline([new PopulatingStep()]),
             new InstallHistoryStore(_dir),
-            stateStore);
+            stateStore,
+            Substitute.For<IThemeFilePicker>());
 
         vm.ThemeUrl = "https://github.com/owner/repo";
         await vm.FetchCommand.ExecuteAsync(null);
