@@ -1,0 +1,23 @@
+{
+  "name": "BlackTurq",
+  "background": "#0A0E0E",
+  "foreground": "#D6F5F1",
+  "cursorColor": "#40E0D0",
+  "selectionBackground": "#1E3A38",
+  "black": "#0A0E0E",
+  "red": "#E05A6A",
+  "green": "#40E0A0",
+  "yellow": "#E0C840",
+  "blue": "#40A8E0",
+  "purple": "#A88CE0",
+  "cyan": "#40E0D0",
+  "white": "#D6F5F1",
+  "brightBlack": "#3A4A48",
+  "brightRed": "#FF7A88",
+  "brightGreen": "#5FFFBF",
+  "brightYellow": "#FFE45F",
+  "brightBlue": "#5FC8FF",
+  "brightPurple": "#C4A8FF",
+  "brightCyan": "#5FFFEF",
+  "brightWhite": "#FFFFFF"
+}

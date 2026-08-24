@@ -1,0 +1,85 @@
+# BlackTurq Minimal — GlazeWM v3 (%USERPROFILE%\.glzr\glazewm\config.yaml)
+# Ponto de partida do tema: paleta preto + turquesa (#40E0D0) e gaps generosos.
+
+general:
+  startup_commands: ['shell-exec zebar']
+  shutdown_commands: ['shell-exec taskkill /IM zebar.exe /F']
+  focus_follows_cursor: false
+  toggle_workspace_on_refocus: false
+
+gaps:
+  scale_with_dpi: true
+  inner_gap: '10px'
+  outer_gap:
+    top: '10px'
+    right: '10px'
+    bottom: '10px'
+    left: '10px'
+
+window_effects:
+  focused_window:
+    border:
+      enabled: true
+      color: '#40e0d0'
+  other_windows:
+    border:
+      enabled: true
+      color: '#1a2422'
+
+window_behavior:
+  initial_state: 'tiling'
+  state_defaults:
+    floating:
+      centered: true
+      shown_on_top: false
+
+workspaces:
+  - name: '1'
+  - name: '2'
+  - name: '3'
+  - name: '4'
+  - name: '5'
+
+keybindings:
+  - commands: ['focus --direction left']
+    bindings: ['alt+h', 'alt+left']
+  - commands: ['focus --direction right']
+    bindings: ['alt+l', 'alt+right']
+  - commands: ['focus --direction up']
+    bindings: ['alt+k', 'alt+up']
+  - commands: ['focus --direction down']
+    bindings: ['alt+j', 'alt+down']
+
+  - commands: ['move --direction left']
+    bindings: ['alt+shift+h', 'alt+shift+left']
+  - commands: ['move --direction right']
+    bindings: ['alt+shift+l', 'alt+shift+right']
+
+  - commands: ['toggle-floating --centered']
+    bindings: ['alt+shift+space']
+  - commands: ['toggle-tiling-direction']
+    bindings: ['alt+v']
+
+  # Pausa o tiling sem derrubar o WM — mesmo comando usado pelo toggle do OttoRice.
+  - commands: ['wm-toggle-pause']
+    bindings: ['alt+shift+p']
+  - commands: ['wm-reload-config']
+    bindings: ['alt+shift+r']
+  - commands: ['wm-exit']
+    bindings: ['alt+shift+e']
+
+  - commands: ['close']
+    bindings: ['alt+shift+q']
+  - commands: ['shell-exec wt']
+    bindings: ['alt+enter']
+
+  - commands: ['focus --workspace 1']
+    bindings: ['alt+1']
+  - commands: ['focus --workspace 2']
+    bindings: ['alt+2']
+  - commands: ['focus --workspace 3']
+    bindings: ['alt+3']
+  - commands: ['focus --workspace 4']
+    bindings: ['alt+4']
+  - commands: ['focus --workspace 5']
+    bindings: ['alt+5']

@@ -1,0 +1,58 @@
+# BlackTurq Minimal — YASB Reborn (%USERPROFILE%\.config\yasb\config.yaml)
+watch_stylesheet: true
+watch_config: true
+debug: false
+
+bars:
+  status-bar:
+    enabled: true
+    screens: ['*']
+    class_name: 'yasb-bar'
+    alignment:
+      position: 'top'
+      center: false
+    dimensions:
+      width: '100%'
+      height: 32
+    padding:
+      top: 6
+      left: 10
+      bottom: 0
+      right: 10
+    widgets:
+      left: ['glazewm_workspaces', 'active_window']
+      center: ['clock']
+      right: ['cpu', 'memory']
+
+widgets:
+  glazewm_workspaces:
+    type: 'yasb.glazewm_workspaces.GlazewmWorkspacesWidget'
+    options:
+      offline_label: 'GlazeWM offline'
+      hide_empty_workspaces: true
+
+  active_window:
+    type: 'yasb.active_window.ActiveWindowWidget'
+    options:
+      label: '{win[title]}'
+      label_no_window: ''
+      max_length: 60
+      monitor_exclusive: true
+
+  clock:
+    type: 'yasb.clock.ClockWidget'
+    options:
+      label: '{%H:%M}'
+      label_alt: '{%d/%m/%Y %H:%M:%S}'
+
+  cpu:
+    type: 'yasb.cpu.CpuWidget'
+    options:
+      label: 'CPU {info[percent][total]}%'
+      update_interval: 2000
+
+  memory:
+    type: 'yasb.memory.MemoryWidget'
+    options:
+      label: 'RAM {virtual_mem_percent}%'
+      update_interval: 5000

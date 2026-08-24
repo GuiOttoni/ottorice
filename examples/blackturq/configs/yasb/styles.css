@@ -1,0 +1,53 @@
+/* BlackTurq Minimal — YASB Reborn (%USERPROFILE%\.config\yasb\styles.css)
+   Preto profundo com destaques turquesa (#40E0D0). */
+
+* {
+    font-size: 12px;
+    font-family: 'JetBrainsMono NFP', 'Segoe UI', sans-serif;
+    font-weight: 500;
+}
+
+.yasb-bar {
+    background-color: rgba(10, 14, 14, 0.85);
+    border-bottom: 1px solid #1e3a38;
+}
+
+.widget {
+    padding: 0 8px;
+    color: #d6f5f1;
+}
+
+.widget .label {
+    padding: 2px 4px;
+}
+
+.active-window-widget .label {
+    color: #8fbfba;
+}
+
+.clock-widget .label {
+    color: #40e0d0;
+    font-weight: 600;
+}
+
+.cpu-widget .label,
+.memory-widget .label {
+    color: #8fbfba;
+}
+
+.glazewm-workspaces .ws-btn {
+    background-color: transparent;
+    border: none;
+    color: #3a4a48;
+    padding: 0 6px;
+}
+
+.glazewm-workspaces .ws-btn.populated {
+    color: #8fbfba;
+}
+
+.glazewm-workspaces .ws-btn.active {
+    color: #0a0e0e;
+    background-color: #40e0d0;
+    border-radius: 4px;
+}

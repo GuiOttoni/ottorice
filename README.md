@@ -19,11 +19,22 @@ dotnet test                          # testes
 
 ```
 src/OttoRice/
-  Features/        # slices: ThemeImport, ThemeInstall, BackupRestore, ...
+  Features/        # slices: ThemeImport, ThemeInstall, BackupRestore, ThemeToggle, ThemeUninstall
   AppRegistry/     # whitelist de apps suportados + appliers + reloaders
-  Common/          # PathResolver, AtomicFileWriter, WinGetClient, ProcessRunner
+  Common/          # PathResolver, AtomicFileWriter, WinGetClient, ProcessRunner, WallpaperService
+examples/blackturq/  # tema de referência do formato do manifesto
 tests/OttoRice.Tests/
 ```
 
+## O que já funciona
+
+- **Instalar:** colar URL do GitHub → preview com apps afetados e dependências →
+  pipeline transacional (WinGet → backup → aplicar → reload) com rollback automático.
+- **Ligar/desligar** o tema ativo sem desinstalar, e pausar só o tiling do GlazeWM.
+- **Desinstalar:** restaura o backup e remove as ferramentas apenas quando nenhum outro
+  tema instalado depende delas (opt-in por checkbox).
+- **Backups:** histórico de sessões com restauração manual.
+
 Regras de segurança inegociáveis: o manifesto nunca fornece caminhos de destino,
-comandos de reload ou scripts — tudo vem do `AppRegistry` interno.
+comandos de reload ou scripts — tudo vem do `AppRegistry` interno. Encerrar processos é
+restrito a uma whitelist e sempre por PID específico, nunca por nome em massa.
