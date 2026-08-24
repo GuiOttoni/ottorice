@@ -88,8 +88,12 @@ public partial class App : Application
 
         services.AddTransient<InstallPipeline>(sp => new InstallPipeline(
         [
-            new PlanStep(sp.GetRequiredService<TargetPlanner>(), sp.GetService<ILogger<PlanStep>>()),
+            // Dependências primeiro: o Planejamento pode precisar resolver o caminho real de um
+            // executável recém-instalado (ex.: TranslucentTB, cuja config fica ao lado do exe
+            // real — ver TargetPlanner.ResolveConfigRootFromExecutable), então precisa rodar
+            // depois que o WinGet já instalou tudo.
             new DependencyStep(sp.GetRequiredService<IWinGetClient>(), sp.GetService<ILogger<DependencyStep>>()),
+            new PlanStep(sp.GetRequiredService<TargetPlanner>(), sp.GetService<ILogger<PlanStep>>()),
             new BackupStep(
                 sp.GetRequiredService<BackupSessionStore>(),
                 sp.GetRequiredService<IWallpaperService>(),

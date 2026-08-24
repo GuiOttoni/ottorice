@@ -80,8 +80,10 @@ public class EndToEndInstallTests : IDisposable
 
         IInstallStep[] steps =
         [
-            new PlanStep(planner),
+            // Dependências antes do Planejamento: reflete a ordem real do App.axaml.cs —
+            // o Planejamento pode depender de um executável que só existe depois do WinGet rodar.
             new DependencyStep(_winGet),
+            new PlanStep(planner),
             new BackupStep(_backups, _wallpaper),
             new ApplyStep(new FileOverrideApplier(), new WindowsTerminalApplier(), _wallpaper),
             failOnReload ? new FailingStep() : new ReloadStep(_reloader),
@@ -110,6 +112,67 @@ public class EndToEndInstallTests : IDisposable
         };
         var result = await BuildPipeline(failOnReload).RunAsync(context);
         return (context, result);
+    }
+
+    private static string VoidhazeThemeDir
+    {
+        get
+        {
+            var dir = new DirectoryInfo(AppContext.BaseDirectory);
+            while (dir is not null && !Directory.Exists(Path.Combine(dir.FullName, "examples")))
+                dir = dir.Parent;
+            Assert.NotNull(dir);
+            return Path.Combine(dir!.FullName, "examples", "voidhaze");
+        }
+    }
+
+    /// <summary>
+    /// Regressão do bug real encontrado no dogfooding (2026-08-24): o Planejamento resolvia o
+    /// diretório de config do TranslucentTB pelo executável real (ver
+    /// TargetPlanner.ResolveConfigRootFromExecutable), mas o pipeline rodava Planejamento antes
+    /// de Dependências — então numa instalação limpa (TranslucentTB ainda não instalado), o
+    /// resolver não achava o exe e o Planejamento falhava com "TranslucentTB não encontrado".
+    /// Prova que, com Dependências antes de Planejamento, o exe "aparece" (via WinGet) a tempo.
+    /// </summary>
+    [Fact]
+    public async Task Translucenttb_executable_is_resolvable_only_after_dependencies_install_it()
+    {
+        var manifestJson = await File.ReadAllTextAsync(
+            Path.Combine(VoidhazeThemeDir, ThemeFetcher.ManifestFileName));
+        var manifest = ManifestValidator.Parse(manifestJson);
+        Assert.True(manifest.IsSuccess, manifest.Error);
+
+        var translucentTbExe = Path.Combine(_sandbox, "packages", "translucenttb-hash", "TranslucentTB.exe");
+        var resolver = Substitute.For<IExecutableResolver>();
+        resolver.Resolve("TranslucentTB").Returns((string?)null); // ainda não instalado
+
+        var winGet = Substitute.For<IWinGetClient>();
+        winGet.IsAvailableAsync(Arg.Any<CancellationToken>()).Returns(true);
+        winGet.IsInstalledAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(false);
+        winGet.InstallAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(ci =>
+        {
+            if ((string)ci[0] == "CharlesMilette.TranslucentTB")
+            {
+                Directory.CreateDirectory(Path.GetDirectoryName(translucentTbExe)!);
+                File.WriteAllText(translucentTbExe, "fake exe");
+                resolver.Resolve("TranslucentTB").Returns(translucentTbExe);
+            }
+            return Result.Ok();
+        });
+
+        var planner = new TargetPlanner(
+            new WindowsTerminalLocator(Path.Combine(_sandbox, "localappdata")),
+            resolver,
+            path => path.Replace("%USERPROFILE%", _fakeUserProfile));
+
+        var pipeline = new InstallPipeline([new DependencyStep(winGet), new PlanStep(planner)]);
+        var context = new InstallContext { Manifest = manifest.Value!, ThemeDirectory = VoidhazeThemeDir };
+
+        var result = await pipeline.RunAsync(context);
+
+        Assert.True(result.IsSuccess, result.Error);
+        Assert.Contains(context.Operations, op =>
+            op.Target.App == "translucenttb" && op.TargetPath.EndsWith("settings.json"));
     }
 
     [Fact]
