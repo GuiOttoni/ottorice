@@ -10,6 +10,7 @@ public interface IWinGetClient
     Task<bool> IsAvailableAsync(CancellationToken ct = default);
     Task<bool> IsInstalledAsync(string packageId, CancellationToken ct = default);
     Task<Result> InstallAsync(string packageId, CancellationToken ct = default);
+    Task<Result> UninstallAsync(string packageId, CancellationToken ct = default);
 }
 
 /// <summary>
@@ -20,6 +21,9 @@ public sealed partial class WinGetClient(IProcessRunner runner) : IWinGetClient
 {
     // APPINSTALLER_CLI_ERROR_PACKAGE_ALREADY_INSTALLED (0x8A15002B)
     private const int AlreadyInstalled = unchecked((int)0x8A15002B);
+
+    // APPINSTALLER_CLI_ERROR_NO_APPLICATIONS_FOUND (0x8A150014)
+    private const int NoPackageFound = unchecked((int)0x8A150014);
 
     [GeneratedRegex(@"^[A-Za-z0-9][A-Za-z0-9\.\-\+_]*$")]
     private static partial Regex PackageIdPattern();
@@ -58,6 +62,22 @@ public sealed partial class WinGetClient(IProcessRunner runner) : IWinGetClient
 
         return Result.Fail(
             $"WinGet falhou ao instalar '{packageId}' (exit 0x{result.ExitCode:X8}). {Truncate(result.StandardError, 300)}");
+    }
+
+    public async Task<Result> UninstallAsync(string packageId, CancellationToken ct = default)
+    {
+        ValidatePackageId(packageId);
+        var result = await runner.RunAsync(
+            "winget",
+            $"uninstall --id {packageId} --exact --silent --accept-source-agreements --disable-interactivity",
+            ct);
+
+        // "Nenhum pacote encontrado" = já desinstalado; desinstalação é idempotente.
+        if (result.ExitCode == 0 || result.ExitCode == NoPackageFound)
+            return Result.Ok();
+
+        return Result.Fail(
+            $"WinGet falhou ao desinstalar '{packageId}' (exit 0x{result.ExitCode:X8}). {Truncate(result.StandardError, 300)}");
     }
 
     // O id vem do manifesto (terceiros): validar o formato impede injeção de argumentos no CLI.

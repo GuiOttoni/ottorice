@@ -1,4 +1,6 @@
+using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -13,6 +15,12 @@ public interface IProcessRunner
 
     /// <summary>Inicia um processo de longa duração (WM, barra) sem aguardar a saída.</summary>
     void StartDetached(string fileName, string arguments);
+
+    /// <summary>PIDs vivos com esse nome de processo (sem extensão).</summary>
+    IReadOnlyList<int> FindProcessIds(string processName);
+
+    /// <summary>Encerra um PID específico. Nunca usar para matar processos em massa por nome.</summary>
+    bool TryKill(int processId);
 }
 
 public sealed class ProcessRunner : IProcessRunner
@@ -48,5 +56,31 @@ public sealed class ProcessRunner : IProcessRunner
             UseShellExecute = false,
             CreateNoWindow = true,
         });
+    }
+
+    public IReadOnlyList<int> FindProcessIds(string processName)
+    {
+        try
+        {
+            return [.. Process.GetProcessesByName(processName).Select(p => p.Id)];
+        }
+        catch (System.Exception)
+        {
+            return [];
+        }
+    }
+
+    public bool TryKill(int processId)
+    {
+        try
+        {
+            using var process = Process.GetProcessById(processId);
+            process.Kill();
+            return process.WaitForExit(5000);
+        }
+        catch (System.Exception)
+        {
+            return false;
+        }
     }
 }

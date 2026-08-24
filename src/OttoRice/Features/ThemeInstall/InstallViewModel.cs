@@ -9,6 +9,7 @@ using CommunityToolkit.Mvvm.Input;
 using OttoRice.AppRegistry;
 using OttoRice.Features.BackupRestore;
 using OttoRice.Features.ThemeImport;
+using OttoRice.Features.ThemeToggle;
 using Serilog;
 
 namespace OttoRice.Features.ThemeInstall;
@@ -20,7 +21,8 @@ namespace OttoRice.Features.ThemeInstall;
 public partial class InstallViewModel(
     IThemeFetcher fetcher,
     InstallPipeline pipeline,
-    InstallHistoryStore history) : ObservableObject
+    InstallHistoryStore history,
+    ThemeStateStore stateStore) : ObservableObject
 {
     private CancellationTokenSource? _cts;
 
@@ -146,6 +148,7 @@ public partial class InstallViewModel(
                     context.BackupSession?.Id ?? "",
                     DateTimeOffset.Now,
                     [.. context.WingetIdsInstalled]));
+                await SaveThemeStateAsync(context);
                 StatusMessage = "✅ Tema aplicado com sucesso!";
             }
             else
@@ -170,4 +173,23 @@ public partial class InstallViewModel(
 
     [RelayCommand(CanExecute = nameof(CanCancel))]
     private void Cancel() => _cts?.Cancel();
+
+    /// <summary>Registra o que o toggle (RF-15) precisa saber para ligar/desligar este tema depois.</summary>
+    private async Task SaveThemeStateAsync(InstallContext context)
+    {
+        var wallpaperOp = context.Operations.FirstOrDefault(op => op.Target.Action == "set");
+        var glazeOp = context.Operations.FirstOrDefault(op => op.Target.App == "glazewm");
+
+        await stateStore.WriteAsync(new ThemeState
+        {
+            ActiveThemeId = context.Manifest.ThemeId,
+            ActiveThemeName = context.Manifest.Name,
+            IsEnabled = true,
+            OriginalWallpaperPath = context.PreviousWallpaperPath,
+            OriginalWallpaperCopy = await stateStore.PreserveWallpaperAsync(context.PreviousWallpaperPath),
+            ThemeWallpaperPath = wallpaperOp?.SourcePath,
+            GlazeWmConfigPath = glazeOp?.TargetPath,
+            ManagedApps = [.. context.Operations.Select(op => op.Target.App!).Distinct()],
+        });
+    }
 }

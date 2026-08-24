@@ -12,6 +12,8 @@ using OttoRice.Features.BackupRestore;
 using OttoRice.Features.ThemeImport;
 using OttoRice.Features.ThemeInstall;
 using OttoRice.Features.ThemeInstall.Steps;
+using OttoRice.Features.ThemeToggle;
+using OttoRice.Features.ThemeUninstall;
 using Serilog;
 
 namespace OttoRice;
@@ -79,7 +81,12 @@ public partial class App : Application
         });
         services.AddSingleton<IThemeFetcher>(sp => new ThemeFetcher(sp.GetRequiredService<HttpClient>()));
 
+        services.AddSingleton<ThemeStateStore>();
+        services.AddSingleton<ThemeToggleService>();
+        services.AddSingleton<UninstallService>();
+
         services.AddTransient<InstallViewModel>();
+        services.AddTransient<ThemeControlViewModel>();
         services.AddTransient<BackupsViewModel>();
         services.AddTransient<MainViewModel>();
 

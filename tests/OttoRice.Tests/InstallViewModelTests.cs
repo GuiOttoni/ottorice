@@ -5,6 +5,7 @@ using OttoRice.Features.ThemeImport;
 using OttoRice.Features.ThemeImport.Models;
 using OttoRice.Features.ThemeInstall;
 using OttoRice.Features.ThemeInstall.Steps;
+using OttoRice.Features.ThemeToggle;
 
 namespace OttoRice.Tests;
 
@@ -35,7 +36,8 @@ public class InstallViewModelTests : IDisposable
         return new InstallViewModel(
             fetcher,
             new InstallPipeline([new NoopStep(pipelineSucceeds)]),
-            history);
+            history,
+            new ThemeStateStore(_dir));
     }
 
     [Fact]
@@ -88,6 +90,45 @@ public class InstallViewModelTests : IDisposable
         Assert.StartsWith("✅", vm.StatusMessage);
         var record = Assert.Single(await history.ReadAllAsync());
         Assert.Equal("tema-vm", record.ThemeId);
+    }
+
+    [Fact]
+    public async Task Successful_install_records_state_for_the_toggle()
+    {
+        var fetcher = Substitute.For<IThemeFetcher>();
+        fetcher.FetchAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+               .Returns(Result<FetchedTheme>.Ok(Theme(_dir)));
+
+        // Step que popula o contexto como o pipeline real faria.
+        var stateStore = new ThemeStateStore(_dir);
+        var vm = new InstallViewModel(
+            fetcher,
+            new InstallPipeline([new PopulatingStep()]),
+            new InstallHistoryStore(_dir),
+            stateStore);
+
+        vm.ThemeUrl = "https://github.com/owner/repo";
+        await vm.FetchCommand.ExecuteAsync(null);
+        await vm.InstallCommand.ExecuteAsync(null);
+
+        var state = await stateStore.ReadAsync();
+        Assert.Equal("tema-vm", state.ActiveThemeId);
+        Assert.True(state.IsEnabled);
+        Assert.Contains("glazewm", state.ManagedApps);
+        Assert.Equal(@"C:\cfg\glazewm.yaml", state.GlazeWmConfigPath);
+    }
+
+    private sealed class PopulatingStep : IInstallStep
+    {
+        public string Name => "populating";
+
+        public Task<Result> ExecuteAsync(InstallContext context, CancellationToken ct = default)
+        {
+            context.Operations.Add(new FileOperation(
+                new RiceTarget { App = "glazewm", Action = "override", Source = "c.yaml" },
+                "src.yaml", @"C:\cfg\glazewm.yaml"));
+            return Task.FromResult(Result.Ok());
+        }
     }
 
     [Fact]

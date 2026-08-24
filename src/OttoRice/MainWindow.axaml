@@ -87,6 +87,63 @@
             </Grid>
         </TabItem>
 
+        <TabItem Header="Tema ativo">
+            <Grid RowDefinitions="Auto,Auto,Auto,*,Auto" Margin="12" DataContext="{Binding Control}">
+
+                <StackPanel Grid.Row="0" Spacing="4">
+                    <TextBlock Text="{Binding ThemeTitle}" FontSize="16" FontWeight="Bold" TextWrapping="Wrap"/>
+                    <TextBlock Text="{Binding StateLabel}"/>
+                </StackPanel>
+
+                <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="8" Margin="0,12,0,0">
+                    <Button Content="Ligar tema" Command="{Binding TurnOnCommand}" Classes="accent"/>
+                    <Button Content="Desligar tema" Command="{Binding TurnOffCommand}"/>
+                    <Button Content="Pausar/retomar tiling" Command="{Binding TogglePauseCommand}"/>
+                    <Button Content="Atualizar" Command="{Binding RefreshCommand}"/>
+                </StackPanel>
+
+                <Border Grid.Row="2" Margin="0,16,0,0" Padding="12" CornerRadius="6" BorderThickness="1"
+                        BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}"
+                        IsVisible="{Binding HasActiveTheme}">
+                    <StackPanel Spacing="6">
+                        <TextBlock Text="Desinstalar este tema" FontWeight="SemiBold"/>
+                        <TextBlock TextWrapping="Wrap" FontSize="12"
+                                   Text="As configurações anteriores são restauradas do backup. As ferramentas abaixo só são removidas se você marcar — e apenas quando nenhum outro tema instalado depende delas."/>
+                        <ItemsControl ItemsSource="{Binding RemovableTools}" Margin="0,4,0,0">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <CheckBox IsChecked="{Binding RemoveIt}"
+                                              IsEnabled="{Binding CanRemove}"
+                                              Content="{Binding Description}"/>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                        <Button Content="Desinstalar tema" Command="{Binding UninstallCommand}"
+                                HorizontalAlignment="Left" Margin="0,6,0,0"/>
+                    </StackPanel>
+                </Border>
+
+                <Border Grid.Row="3" Margin="0,12,0,0" CornerRadius="6" BorderThickness="1"
+                        BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}">
+                    <ScrollViewer>
+                        <ItemsControl ItemsSource="{Binding Log}" Margin="8">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <TextBlock Text="{Binding}" FontFamily="Cascadia Mono,Consolas,monospace"
+                                               FontSize="12" TextWrapping="Wrap"/>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
+                </Border>
+
+                <StackPanel Grid.Row="4" Margin="0,10,0,0" Spacing="6">
+                    <ProgressBar IsIndeterminate="True" IsVisible="{Binding IsBusy}" Height="4"/>
+                    <TextBlock Text="{Binding StatusMessage}" TextWrapping="Wrap"/>
+                </StackPanel>
+            </Grid>
+        </TabItem>
+
         <TabItem Header="Backups">
             <Grid RowDefinitions="Auto,*,Auto" Margin="12" DataContext="{Binding Backups}">
                 <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="8">
