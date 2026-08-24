@@ -91,6 +91,7 @@ public sealed partial class ConfigureWindhawkModsStep(
                 logger?.LogInformation("Mods do Windhawk configurados: {Mods}.",
                     string.Join(", ", modOps.Select(op => op.Target.App)));
                 context.Report("Mods do Windhawk configurados.");
+                EnsureWindhawkRunning(context);
             }
         }
         finally
@@ -101,6 +102,29 @@ public sealed partial class ConfigureWindhawkModsStep(
 
         // Melhor esforço: nunca falha o pipeline (Windhawk é opcional/manual).
         return Result.Ok();
+    }
+
+    /// <summary>
+    /// O componente de sessão do Windhawk (windhawk.exe, sem elevação — o serviço de
+    /// verdade roda em outra sessão) precisa estar rodando pra injetar os mods recém
+    /// habilitados nos processos já abertos (explorer.exe etc.). Se já estiver, é
+    /// idempotente — o próprio Windhawk detecta e não abre uma segunda instância.
+    /// </summary>
+    private void EnsureWindhawkRunning(InstallContext context)
+    {
+        if (runner.FindProcessIds("windhawk").Count > 0)
+            return;
+
+        var windhawkPath = resolver.Resolve("windhawk");
+        if (windhawkPath is null)
+        {
+            logger?.LogWarning("windhawk.exe não encontrado — mods configurados, mas o app não foi iniciado.");
+            return;
+        }
+
+        runner.StartDetached(windhawkPath, "");
+        logger?.LogInformation("Windhawk iniciado para carregar os mods recém-configurados.");
+        context.Report("Windhawk iniciado.");
     }
 
     private static string BuildBatchScript(

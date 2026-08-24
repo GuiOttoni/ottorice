@@ -264,13 +264,15 @@ public class ConfigureWindhawkModsStepTests
     }
 
     [Fact]
-    public async Task Success_runs_one_elevated_batch_and_reports_success()
+    public async Task Success_runs_one_elevated_batch_and_starts_windhawk_if_not_running()
     {
         var resolver = Substitute.For<IExecutableResolver>();
         resolver.Resolve("windhawk-cli").Returns(@"C:\Program Files\Windhawk\windhawk-cli.exe");
+        resolver.Resolve("windhawk").Returns(@"C:\Program Files\Windhawk\windhawk.exe");
         var runner = Substitute.For<IProcessRunner>();
         runner.RunElevatedAsync("cmd.exe", Arg.Any<string>(), Arg.Any<CancellationToken>())
               .Returns(Task.FromResult<int?>(0));
+        runner.FindProcessIds("windhawk").Returns([]);
 
         var log = new List<string>();
         var context = ContextWithLog(log, ModTarget());
@@ -281,6 +283,24 @@ public class ConfigureWindhawkModsStepTests
         await runner.Received(1).RunElevatedAsync(
             "cmd.exe", Arg.Is<string>(a => a.Contains("/c") && a.Contains(".cmd")), Arg.Any<CancellationToken>());
         Assert.Contains(log, l => l.Contains("configurados"));
+        runner.Received(1).StartDetached(@"C:\Program Files\Windhawk\windhawk.exe", Arg.Any<string>());
+    }
+
+    [Fact]
+    public async Task Success_does_not_start_windhawk_again_if_already_running()
+    {
+        var resolver = Substitute.For<IExecutableResolver>();
+        resolver.Resolve("windhawk-cli").Returns(@"C:\Program Files\Windhawk\windhawk-cli.exe");
+        var runner = Substitute.For<IProcessRunner>();
+        runner.RunElevatedAsync("cmd.exe", Arg.Any<string>(), Arg.Any<CancellationToken>())
+              .Returns(Task.FromResult<int?>(0));
+        runner.FindProcessIds("windhawk").Returns([1234]);
+
+        var context = ContextWithLog([], ModTarget());
+        var result = await new ConfigureWindhawkModsStep(resolver, runner).ExecuteAsync(context);
+
+        Assert.True(result.IsSuccess);
+        runner.DidNotReceiveWithAnyArgs().StartDetached(default!, default!);
     }
 
     [Fact]

@@ -35,6 +35,7 @@ public sealed class ExecutableResolver : IExecutableResolver
             ["yasbc"] = [@"%ProgramFiles%\YASB\yasbc.exe"],
             ["yasb"] = [@"%ProgramFiles%\YASB\yasb.exe"],
             ["windhawk-cli"] = [@"%ProgramFiles%\Windhawk\windhawk-cli.exe"],
+            ["windhawk"] = [@"%ProgramFiles%\Windhawk\windhawk.exe"],
         };
 
     private readonly Func<string, string> _expand;
