@@ -24,7 +24,9 @@ configs/zed/settings.json                    tema + fonte do Zed
 configs/fastfetch/config.jsonc               módulos do fastfetch
 configs/flow_launcher/settings.json          hotkey/idioma/tema do Flow Launcher
 configs/ohmyposh/catppuccin-mocha.omp.json   prompt do Oh My Posh
-configs/windhawk/start-menu-styler.yaml      settings do Windows 11 Start Menu Styler (Windhawk)
+configs/windhawk/taskbar-styler.yaml               settings do Taskbar Styler (Windhawk)
+configs/windhawk/start-menu-styler.yaml            settings do Start Menu Styler (Windhawk)
+configs/windhawk/notification-center-styler.yaml   settings do Notification Center Styler (Windhawk)
 assets/wallpaper.png, assets/preview.png     gerados nesta sessão (gradiente + glow)
 ```
 
@@ -92,16 +94,18 @@ e `windows-11-notification-center-styler` — os targets `configure_mod` deste m
   1. `"settings"` inline — pares chave/valor simples, ex.: `{ "theme": "FrostyGlass" }`.
   2. `"source"` apontando pra um YAML **no mesmo formato que a própria UI do Windhawk usa no
      "modo textual"** dos settings do mod (`WindhawkSettingsFlattener` faz a conversão pra
-     chave/valor "flat" que o `windhawk-cli` espera, ex.: `controlStyles[0].target`). É o
-     usado aqui: `configs/windhawk/start-menu-styler.yaml` define
-     `theme: 'Down Aero'` pro Start Menu Styler — um dos temas embutidos no mod, mais
-     neutro/translúcido, sem forçar uma cor que não bateria com o resto da paleta Mocha.
+     chave/valor "flat" que o `windhawk-cli` espera, ex.: `controlStyles[0].target`).
      `settings` inline tem prioridade sobre o YAML quando os dois definem a mesma chave.
-- **Taskbar Styler e Notification Center Styler** ficam só instalados/habilitados (sem
-  `settings`/`source`) — os temas embutidos no Taskbar Styler (FrostyGlass, RosePine,
-  DockLike, Squircle...) não têm um "Catppuccin" exato, e forçar um que não bate ficaria
-  pior que deixar no padrão. Escolha visualmente pela galeria do próprio mod
-  (`windhawk-cli mod show <id>` lista os temas com link de preview) se quiser ir além.
+- **Nenhum dos três mods tem um tema "Catppuccin" exato** — os temas embutidos (FrostyGlass,
+  RosePine, DockLike, Squircle, Down Aero, Matter...) não incluem essa paleta específica.
+  Em vez de forçar algo que não bate, os três YAMLs deste tema usam **temas verificados que
+  já existem** nos próprios mods e formam uma família visual coerente (vidro/translúcido):
+  - `configs/windhawk/start-menu-styler.yaml`: `theme: 'Down Aero'`.
+  - `configs/windhawk/taskbar-styler.yaml`: `theme: 'FrostyGlass'`.
+  - `configs/windhawk/notification-center-styler.yaml`: `theme: 'FrostyGlass'` (mesmo tema
+    do taskbar, pra manter a central de notificações na mesma família visual).
+  Pra ir além do padrão, `windhawk-cli mod show <id>` lista todos os temas de cada mod com
+  link de preview.
 
 ### Flow Launcher — por que não tem um tema Catppuccin pronto
 

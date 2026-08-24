@@ -1,0 +1,13 @@
+# Catppuccin Everywhere — Windows 11 Notification Center Styler (Windhawk)
+# Mesmo formato que a UI do Windhawk mostra no "modo textual" (Settings do mod).
+# "FrostyGlass" — mesma escolha do Taskbar Styler, pra manter a central de notificações na
+# mesma família visual (vidro/translúcido) do resto do desktop.
+theme: 'FrostyGlass'
+styleConstants:
+  - ''
+controlStyles:
+  - target: ''
+    styles:
+      - ''
+themeResourceVariables:
+  - ''

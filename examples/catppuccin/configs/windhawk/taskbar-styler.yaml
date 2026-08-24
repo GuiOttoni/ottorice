@@ -1,0 +1,15 @@
+# Catppuccin Everywhere — Windows 11 Taskbar Styler (Windhawk)
+# Mesmo formato que a UI do Windhawk mostra no "modo textual" (Settings do mod).
+# "FrostyGlass" é um dos temas embutidos no mod — combina com o "Down Aero" do Start Menu
+# (mesma família visual: vidro/translúcido) sem forçar uma cor que não bateria com Mocha.
+theme: 'FrostyGlass'
+styleConstants:
+  - ''
+controlStyles:
+  - target: ''
+    styles:
+      - ''
+themeResourceVariables:
+  - ''
+clickThroughTaskbar: 0
+xamlDiagnosticsHandling: 'alert'

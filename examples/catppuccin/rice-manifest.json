@@ -62,7 +62,8 @@
     },
     {
       "app": "windows-11-taskbar-styler",
-      "action": "configure_mod"
+      "action": "configure_mod",
+      "source": "configs/windhawk/taskbar-styler.yaml"
     },
     {
       "app": "windows-11-start-menu-styler",
@@ -71,7 +72,8 @@
     },
     {
       "app": "windows-11-notification-center-styler",
-      "action": "configure_mod"
+      "action": "configure_mod",
+      "source": "configs/windhawk/notification-center-styler.yaml"
     }
   ]
 }
