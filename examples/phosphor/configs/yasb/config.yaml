@@ -1,14 +1,10 @@
-# Catppuccin Everywhere — YASB Reborn (%USERPROFILE%\.config\yasb\config.yaml)
-# Visual baseado no tema comunitário "WinUI11" (amnweb/yasb-themes, autor amnweb) —
-# https://yasb.dev/themes — recolorido pra paleta Catppuccin Mocha oficial
-# (https://catppuccin.com/palette). Diferente do Neos (versão anterior deste tema), o
-# WinUI11 usa só ícones Segoe Fluent Icons/Segoe UI — ambos já vêm com o Windows 11, sem
-# depender de Nerd Font instalada.
-#
-# Únicas mudanças de conteúdo em relação ao original: adicionado 'glazewm_workspaces'
-# (namespace 'glazewm.*', não 'yasb.*') pra indicar os workspaces do GlazeWM — o tema
-# original não tem nenhum widget de window manager — e mantido o 'taskbar' que já
-# substituía a nativa nas versões anteriores deste exemplo.
+# Phosphor — YASB (%USERPROFILE%\.config\yasb\config.yaml)
+# Original bar layout (not adapted from a community theme) using the same widget schema
+# proven in the catppuccin example: `glazewm.workspaces.GlazewmWorkspacesWidget`
+# (namespace `glazewm.*`, no '-widget' suffix on its CSS class) alongside `yasb.*`
+# widgets (which DO get a '-widget' suffix on their CSS class — see styles.css). Only
+# Segoe UI / Segoe Fluent Icons are used — both ship with Windows 11, no Nerd Font
+# required. Weather uses `yasb.open_meteo.OpenMeteoWidget`, which needs no API key.
 watch_stylesheet: true
 watch_config: true
 debug: false
@@ -25,10 +21,9 @@ bars:
       enabled: true
       dark_mode: true
       round_corners: false
-    # windows_app_bar: a barra se registra como AppBar do Windows (mesmo mecanismo da
-    # taskbar nativa) e reserva a própria faixa de tela — sem isso o GlazeWM tenta blocar
-    # (tiling) a janela do YASB como se fosse um app comum, esticando-a pra ocupar o
-    # monitor inteiro no multi-monitor (bug real encontrado em dogfooding, ver doc).
+    # windows_app_bar: registers the bar as a Windows AppBar (same mechanism as the
+    # native taskbar), reserving its own screen strip. Without this, GlazeWM tiles the
+    # YASB window like any other app and stretches it across the whole monitor.
     window_flags:
       always_on_top: false
       windows_app_bar: true
@@ -41,12 +36,13 @@ bars:
       bottom: 0
       right: 0
     widgets:
-      left: ['glazewm_workspaces', 'home', 'quick_launch']
+      left: ['glazewm_workspaces', 'home']
       center: ['clock']
-      right: ['systray', 'cpu', 'memory', 'open_meteo', 'volume', 'taskbar', 'notifications', 'power_menu']
+      right: ['systray', 'cpu', 'memory', 'open_meteo', 'volume', 'taskbar', 'power_menu']
 
 widgets:
-  # Atenção: o namespace deste widget é 'glazewm.workspaces', não 'yasb.*' como os demais.
+  # Namespace note: this widget lives under 'glazewm.workspaces', not 'yasb.*' like the
+  # rest — its CSS class ('glazewm-workspaces') has NO '-widget' suffix.
   glazewm_workspaces:
     type: 'glazewm.workspaces.GlazewmWorkspacesWidget'
     options:
@@ -57,12 +53,12 @@ widgets:
   home:
     type: 'yasb.home.HomeWidget'
     options:
-      label: '<span></span>'
+      label: '<span></span>'
       menu_list:
-        - { title: 'Pasta do usuário', path: '~' }
+        - { title: 'Home', path: '~' }
         - { title: 'Downloads', path: '~\Downloads' }
-        - { title: 'Documentos', path: '~\Documents' }
-        - { title: 'Imagens', path: '~\Pictures' }
+        - { title: 'Documents', path: '~\Documents' }
+        - { title: 'Pictures', path: '~\Pictures' }
       system_menu: true
       power_menu: true
       blur: true
@@ -71,40 +67,8 @@ widgets:
       border_color: 'System'
       alignment: 'center'
 
-  quick_launch:
-    type: 'yasb.quick_launch.QuickLaunchWidget'
-    options:
-      label: '<span></span>'
-      search_placeholder: 'Buscar aplicativos...'
-      max_results: 30
-      show_icons: true
-      icon_size: 16
-      compact_text: true
-      providers:
-        apps:
-          enabled: true
-          prefix: '*'
-          priority: 0
-          show_recent: true
-          max_recent: 5
-          show_description: true
-      popup:
-        width: 720
-        height: 480
-        blur: true
-        round_corners: true
-        round_corners_type: 'normal'
-        border_color: 'system'
-        dark_mode: true
-      callbacks:
-        on_left: 'toggle_quick_launch'
-      keybindings:
-        - keys: 'alt+space'
-          action: 'toggle_quick_launch'
-          screen: 'primary'
-
-  # Substitui a taskbar nativa (oculta pelo OttoRice): mostra os apps abertos direto na
-  # barra do YASB, com ícone e clique pra alternar/minimizar.
+  # Replaces the native taskbar (hidden by OttoRice): open apps rendered directly in the
+  # YASB bar, with icon and click-to-focus/minimize.
   taskbar:
     type: 'yasb.taskbar.TaskbarWidget'
     options:
@@ -140,8 +104,8 @@ widgets:
     type: 'yasb.systray.SystrayWidget'
     options:
       class_name: 'systray'
-      label_collapsed: ''
-      label_expanded: ''
+      label_collapsed: ''
+      label_expanded: ''
       label_position: 'right'
       pin_click_modifier: 'ctrl'
       show_unpinned: false
@@ -164,8 +128,8 @@ widgets:
   open_meteo:
     type: 'yasb.open_meteo.OpenMeteoWidget'
     options:
-      label: '<span></span>{temp}'
-      label_alt: '{location}: Min {min_temp}, Max {max_temp}, Umidade {humidity}'
+      label: '<span></span>{temp}'
+      label_alt: '{location}: Min {min_temp}, Max {max_temp}, Humidity {humidity}'
       tooltip: true
       update_interval: 600
       hide_decimal: true
@@ -189,11 +153,11 @@ widgets:
       label_alt: '<span>{icon}</span>{level}'
       tooltip: true
       icons:
-        muted: ''
-        '10': ''
-        '30': ''
-        '60': ''
-        '100': ''
+        muted: ''
+        '10': ''
+        '30': ''
+        '60': ''
+        '100': ''
       callbacks:
         on_left: 'toggle_volume_menu'
         on_right: 'toggle_mute'
@@ -201,8 +165,8 @@ widgets:
   cpu:
     type: 'yasb.cpu.CpuWidget'
     options:
-      label: '<span></span> {info[percent][total]}%'
-      label_alt: '<span></span> {info[freq][current]} MHz'
+      label: '<span></span> {info[percent][total]}%'
+      label_alt: '<span></span> {info[freq][current]} MHz'
       update_interval: 2000
       menu:
         enabled: true
@@ -217,8 +181,8 @@ widgets:
   memory:
     type: 'yasb.memory.MemoryWidget'
     options:
-      label: '<span></span> {virtual_mem_free}'
-      label_alt: '<span></span> VIRT: {virtual_mem_percent}% SWAP: {swap_mem_percent}%'
+      label: '<span></span> {virtual_mem_free}'
+      label_alt: '<span></span> VIRT: {virtual_mem_percent}% SWAP: {swap_mem_percent}%'
       update_interval: 5000
       callbacks:
         on_left: 'toggle_menu'
@@ -233,7 +197,7 @@ widgets:
   power_menu:
     type: 'yasb.power_menu.PowerMenuWidget'
     options:
-      label: '<span></span>'
+      label: '<span></span>'
       uptime: true
       show_user: true
       menu_style: 'popup'
@@ -248,22 +212,10 @@ widgets:
         offset_left: 0
       profile_image_size: 64
       buttons:
-        lock: ['', 'Bloquear']
-        signout: ['', 'Sair']
-        sleep: ['', 'Suspender']
-        hibernate: ['', 'Hibernar']
-        restart: ['', 'Reiniciar']
-        shutdown: ['', 'Desligar']
-        cancel: ['', 'Cancelar']
-
-  notifications:
-    type: 'yasb.notifications.NotificationsWidget'
-    options:
-      label: '<span></span>'
-      label_alt: '{count} notificações'
-      hide_empty: true
-      tooltip: false
-      callbacks:
-        on_left: 'toggle_notification'
-        on_right: 'do_nothing'
-        on_middle: 'do_nothing'
+        lock: ['', 'Lock']
+        signout: ['', 'Sign out']
+        sleep: ['', 'Sleep']
+        hibernate: ['', 'Hibernate']
+        restart: ['', 'Restart']
+        shutdown: ['', 'Shut down']
+        cancel: ['', 'Cancel']

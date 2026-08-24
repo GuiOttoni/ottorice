@@ -4,22 +4,26 @@ using System.Linq;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using OttoRice.Features.ThemeInstall;
 using OttoRice.Features.ThemeUninstall;
 
 namespace OttoRice.Features.ThemeToggle;
 
 /// <summary>
-/// Aba "Tema ativo": liga/desliga (RF-15), pausa o tiling e desinstala (RF-16).
-/// A remoção de ferramentas é opt-in e só habilitada para as com refcount zero.
+/// Aba "Tema ativo": liga/desliga (RF-15), pausa o tiling, reaplica (seção 12.2 do plano de
+/// evolução) e desinstala (RF-16). A remoção de ferramentas é opt-in e só habilitada para as
+/// com refcount zero.
 /// </summary>
 public partial class ThemeControlViewModel(
     ThemeToggleService toggle,
-    UninstallService uninstall) : ObservableObject
+    UninstallService uninstall,
+    ReapplyThemeService reapply) : ObservableObject
 {
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(TurnOnCommand))]
     [NotifyCanExecuteChangedFor(nameof(TurnOffCommand))]
     [NotifyCanExecuteChangedFor(nameof(TogglePauseCommand))]
+    [NotifyCanExecuteChangedFor(nameof(ReapplyCommand))]
     [NotifyCanExecuteChangedFor(nameof(UninstallCommand))]
     [NotifyCanExecuteChangedFor(nameof(RefreshCommand))]
     private bool _isBusy;
@@ -30,6 +34,7 @@ public partial class ThemeControlViewModel(
     [NotifyPropertyChangedFor(nameof(StateLabel))]
     [NotifyCanExecuteChangedFor(nameof(TurnOnCommand))]
     [NotifyCanExecuteChangedFor(nameof(TurnOffCommand))]
+    [NotifyCanExecuteChangedFor(nameof(ReapplyCommand))]
     [NotifyCanExecuteChangedFor(nameof(UninstallCommand))]
     private ThemeState _state = ThemeState.Empty;
 
@@ -99,6 +104,21 @@ public partial class ThemeControlViewModel(
         {
             IsBusy = false;
         }
+    }
+
+    // Permitido mesmo com o tema desligado (sobrescreve os arquivos de qualquer forma) — a
+    // mensagem de sucesso avisa quando o tema está desligado, ver ReapplyAsync.
+    private bool CanReapply() => !IsBusy && State.HasActiveTheme;
+
+    [RelayCommand(CanExecute = nameof(CanReapply))]
+    private Task ReapplyAsync()
+    {
+        var wasEnabled = State.IsEnabled;
+        return RunAsync(
+            progress => reapply.ReapplyAsync(progress),
+            wasEnabled
+                ? "✅ Tema reaplicado."
+                : "✅ Configurações reaplicadas (o tema está desligado — ligue para ver o efeito).");
     }
 
     private bool CanUninstall() => !IsBusy && State.HasActiveTheme;

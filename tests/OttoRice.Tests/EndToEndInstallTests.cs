@@ -24,6 +24,7 @@ public class EndToEndInstallTests : IDisposable
     private readonly IWinGetClient _winGet = Substitute.For<IWinGetClient>();
     private readonly IWallpaperService _wallpaper = Substitute.For<IWallpaperService>();
     private readonly IAppReloader _reloader = Substitute.For<IAppReloader>();
+    private readonly IProcessRunner _processRunner = Substitute.For<IProcessRunner>();
     private readonly BackupSessionStore _backups;
 
     private static string ExampleThemeDir
@@ -87,7 +88,9 @@ public class EndToEndInstallTests : IDisposable
             new PlanStep(planner),
             new BackupStep(_backups, _wallpaper),
             new ApplyStep(new FileOverrideApplier(), new WindowsTerminalApplier(), _wallpaper),
-            failOnReload ? new FailingStep() : new ReloadStep(_reloader),
+            failOnReload
+                ? new FailingStep()
+                : new ReloadStep(_reloader, _processRunner, verifyTimeout: TimeSpan.FromMilliseconds(1)),
         ];
         return new InstallPipeline(steps);
     }

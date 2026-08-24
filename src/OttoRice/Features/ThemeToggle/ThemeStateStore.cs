@@ -20,6 +20,11 @@ public sealed record ThemeState
     public string? ActiveThemeName { get; init; }
     public bool IsEnabled { get; init; }
 
+    /// <summary>URL/caminho que o usuário colou na aba Instalar — permite reaplicar o tema
+    /// (rebaixar os arquivos e reaplicar) sem o usuário precisar colar de novo. Nulo para
+    /// temas instalados antes desta versão.</summary>
+    public string? SourceUrl { get; init; }
+
     public string? OriginalWallpaperPath { get; init; }
     public string? OriginalWallpaperCopy { get; init; }
     public string? ThemeWallpaperPath { get; init; }

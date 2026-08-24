@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Threading;
 using System.Threading.Tasks;
@@ -16,6 +17,19 @@ namespace OttoRice.AppRegistry.Reloaders;
 public sealed class AppReloader(
     IProcessRunner runner, IExecutableResolver resolver, ILogger<AppReloader>? logger = null) : IAppReloader
 {
+    /// <summary>Nome do processo (sem extensão) esperado rodando após cada ação — usado tanto
+    /// aqui (FlowLauncher) quanto pelo validador pós-reload em ReloadStep.</summary>
+    private static readonly IReadOnlyDictionary<ReloadAction, string> ProcessNames =
+        new Dictionary<ReloadAction, string>
+        {
+            [ReloadAction.GlazeWm] = "glazewm",
+            [ReloadAction.Yasb] = "yasb",
+            [ReloadAction.Zebar] = "zebar",
+            [ReloadAction.FlowLauncher] = "Flow.Launcher",
+        };
+
+    public string? ExpectedProcessName(ReloadAction action) => ProcessNames.GetValueOrDefault(action);
+
     public async Task<Result> ReloadAsync(ReloadAction action, CancellationToken ct = default)
     {
         return action switch
@@ -26,9 +40,32 @@ public sealed class AppReloader(
                 "yasbc", "reload", "start --silent", ct),
             // Zebar é iniciado/gerenciado pelos startup_commands do próprio GlazeWM.
             ReloadAction.Zebar => Result.Ok(),
+            // Flow Launcher não tem CLI de reload — a config é lida ao iniciar (ou já ao vivo).
+            // Só precisa estar rodando: sobe se não estiver, não faz nada se já estiver.
+            ReloadAction.FlowLauncher => StartIfNotRunning("Flow.Launcher"),
             ReloadAction.None or ReloadAction.Wallpaper => Result.Ok(),
             _ => Result.Fail($"Ação de reload desconhecida: {action}"),
         };
+    }
+
+    private Result StartIfNotRunning(string exeName)
+    {
+        if (runner.FindProcessIds(exeName).Count > 0)
+        {
+            logger?.LogInformation("'{ExeName}' já está rodando — nada a fazer.", exeName);
+            return Result.Ok();
+        }
+
+        var exePath = resolver.Resolve(exeName);
+        if (exePath is null)
+        {
+            logger?.LogWarning("'{ExeName}' não encontrado (nem no PATH nem nos locais de instalação conhecidos).", exeName);
+            return Result.Fail($"'{exeName}' não encontrado (nem no PATH nem nos locais de instalação conhecidos).");
+        }
+
+        runner.StartDetached(exePath, "");
+        logger?.LogInformation("'{ExeName}' iniciado (não estava rodando).", exeName);
+        return Result.Ok();
     }
 
     private async Task<Result> ReloadOrStartAsync(

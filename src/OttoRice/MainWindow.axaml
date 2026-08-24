@@ -154,6 +154,8 @@
                         <Button Content="LIGAR TEMA" Classes="btn-primary" Command="{Binding TurnOnCommand}" />
                         <Button Content="DESLIGAR TEMA" Classes="btn-secondary" Command="{Binding TurnOffCommand}" />
                         <Button Content="PAUSAR/RETOMAR TILING" Classes="btn-secondary" Command="{Binding TogglePauseCommand}" />
+                        <Button Content="REAPLICAR TEMA" Classes="btn-secondary" Command="{Binding ReapplyCommand}"
+                                ToolTip.Tip="Baixa os arquivos do tema novamente e os reaplica (config/wallpaper/reload)." />
                         <Button Content="ATUALIZAR" Classes="btn-secondary" Command="{Binding RefreshCommand}" />
                         <ProgressBar IsIndeterminate="True" IsVisible="{Binding IsBusy}"
                                      Width="140" Height="4" VerticalAlignment="Center" />

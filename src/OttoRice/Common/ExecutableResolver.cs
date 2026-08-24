@@ -36,6 +36,9 @@ public sealed class ExecutableResolver : IExecutableResolver
             ["yasb"] = [@"%ProgramFiles%\YASB\yasb.exe"],
             ["windhawk-cli"] = [@"%ProgramFiles%\Windhawk\windhawk-cli.exe"],
             ["windhawk"] = [@"%ProgramFiles%\Windhawk\windhawk.exe"],
+            // Instalado pelo WinGet (Flow-Launcher.Flow-Launcher) em %LOCALAPPDATA%, não em
+            // Program Files nem no PATH — confirmado numa instalação real da máquina de dev.
+            ["Flow.Launcher"] = [@"%LOCALAPPDATA%\FlowLauncher\Flow.Launcher.exe"],
         };
 
     private readonly Func<string, string> _expand;

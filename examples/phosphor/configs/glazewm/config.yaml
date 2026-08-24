@@ -1,0 +1,92 @@
+# Phosphor — GlazeWM v3 (%USERPROFILE%\.glzr\glazewm\config.yaml)
+# Dark, phosphor-green rice inspired by ottosite's own visual language (near-black
+# backgrounds, one saturated accent, monospace everywhere, tight radii) pushed into a
+# Matrix-evoking green palette. No Zebar — just GlazeWM + YASB.
+
+general:
+  startup_commands: []
+  focus_follows_cursor: false
+  toggle_workspace_on_refocus: false
+  cursor_jump:
+    enabled: true
+    trigger: 'monitor_focus'
+
+gaps:
+  scale_with_dpi: true
+  inner_gap: '14px'
+  outer_gap:
+    top: '10px'
+    right: '14px'
+    bottom: '14px'
+    left: '14px'
+
+window_effects:
+  focused_window:
+    border:
+      enabled: true
+      color: '#00ff41' # phosphor — primary accent, focused window border
+  other_windows:
+    border:
+      enabled: true
+      color: '#0f3322' # dim moss-green — unfocused windows recede into the dark
+
+window_behavior:
+  initial_state: 'tiling'
+  state_defaults:
+    floating:
+      centered: true
+      shown_on_top: false
+    fullscreen:
+      maximized: false
+      shown_on_top: false
+
+workspaces:
+  - name: '1'
+  - name: '2'
+  - name: '3'
+  - name: '4'
+  - name: '5'
+
+keybindings:
+  - commands: ['focus --direction left']
+    bindings: ['alt+h', 'alt+left']
+  - commands: ['focus --direction right']
+    bindings: ['alt+l', 'alt+right']
+  - commands: ['focus --direction up']
+    bindings: ['alt+k', 'alt+up']
+  - commands: ['focus --direction down']
+    bindings: ['alt+j', 'alt+down']
+
+  - commands: ['move --direction left']
+    bindings: ['alt+shift+h', 'alt+shift+left']
+  - commands: ['move --direction right']
+    bindings: ['alt+shift+l', 'alt+shift+right']
+
+  - commands: ['toggle-floating --centered']
+    bindings: ['alt+shift+space']
+  - commands: ['toggle-tiling-direction']
+    bindings: ['alt+v']
+
+  # Pause tiling without killing the WM — same command OttoRice's own toggle uses.
+  - commands: ['wm-toggle-pause']
+    bindings: ['alt+shift+p']
+  - commands: ['wm-reload-config']
+    bindings: ['alt+shift+r']
+  - commands: ['wm-exit']
+    bindings: ['alt+shift+e']
+
+  - commands: ['close']
+    bindings: ['alt+shift+q']
+  - commands: ['shell-exec wt']
+    bindings: ['alt+enter']
+
+  - commands: ['focus --workspace 1']
+    bindings: ['alt+1']
+  - commands: ['focus --workspace 2']
+    bindings: ['alt+2']
+  - commands: ['focus --workspace 3']
+    bindings: ['alt+3']
+  - commands: ['focus --workspace 4']
+    bindings: ['alt+4']
+  - commands: ['focus --workspace 5']
+    bindings: ['alt+5']

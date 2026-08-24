@@ -11,4 +11,11 @@ namespace OttoRice.AppRegistry.Reloaders;
 public interface IAppReloader
 {
     Task<Result> ReloadAsync(ReloadAction action, CancellationToken ct = default);
+
+    /// <summary>
+    /// Nome do processo (sem extensão) que deveria estar rodando depois dessa ação, ou null
+    /// se a ação não implica processo persistente (None/Wallpaper). Usado pelo validador
+    /// pós-instalação (ver ReloadStep) para confirmar que o reload/start funcionou de verdade.
+    /// </summary>
+    string? ExpectedProcessName(ReloadAction action);
 }

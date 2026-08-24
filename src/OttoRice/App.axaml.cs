@@ -101,12 +101,42 @@ public partial class App : Application
                 sp.GetRequiredService<WindowsTerminalApplier>(),
                 sp.GetRequiredService<IWallpaperService>(),
                 sp.GetService<ILogger<ApplyStep>>()),
-            new ReloadStep(sp.GetRequiredService<IAppReloader>(), sp.GetService<ILogger<ReloadStep>>()),
+            new ReloadStep(
+                sp.GetRequiredService<IAppReloader>(),
+                sp.GetRequiredService<IProcessRunner>(),
+                sp.GetService<ILogger<ReloadStep>>()),
             new ConfigureWindhawkModsStep(
                 sp.GetRequiredService<IExecutableResolver>(),
                 sp.GetRequiredService<IProcessRunner>(),
                 sp.GetService<ILogger<ConfigureWindhawkModsStep>>()),
         ], sp.GetService<ILogger<InstallPipeline>>()));
+
+        // Pipeline reduzida para "Reaplicar tema" (seção 12.2 do plano de evolução):
+        // Planejamento → Aplicação → Reload → Mods do Windhawk, sem Dependência (já
+        // instaladas) nem Backup (evita poluir BackupSessionStore/InstallHistoryStore com
+        // sessões duplicadas do mesmo tema). Instância própria (não reaproveita a
+        // InstallPipeline "cheia" registrada acima) para não haver ambiguidade no DI.
+        services.AddTransient<ReapplyThemeService>(sp => new ReapplyThemeService(
+            sp.GetRequiredService<IThemeFetcher>(),
+            new InstallPipeline(
+            [
+                new PlanStep(sp.GetRequiredService<TargetPlanner>(), sp.GetService<ILogger<PlanStep>>()),
+                new ApplyStep(
+                    sp.GetRequiredService<FileOverrideApplier>(),
+                    sp.GetRequiredService<WindowsTerminalApplier>(),
+                    sp.GetRequiredService<IWallpaperService>(),
+                    sp.GetService<ILogger<ApplyStep>>()),
+                new ReloadStep(
+                    sp.GetRequiredService<IAppReloader>(),
+                    sp.GetRequiredService<IProcessRunner>(),
+                    sp.GetService<ILogger<ReloadStep>>()),
+                new ConfigureWindhawkModsStep(
+                    sp.GetRequiredService<IExecutableResolver>(),
+                    sp.GetRequiredService<IProcessRunner>(),
+                    sp.GetService<ILogger<ConfigureWindhawkModsStep>>()),
+            ], sp.GetService<ILogger<InstallPipeline>>()),
+            sp.GetRequiredService<ThemeStateStore>(),
+            sp.GetService<ILogger<ReapplyThemeService>>()));
 
         return services.BuildServiceProvider();
     }

@@ -216,6 +216,7 @@ public partial class InstallViewModel(
             ActiveThemeId = context.Manifest.ThemeId,
             ActiveThemeName = context.Manifest.Name,
             IsEnabled = true,
+            SourceUrl = ThemeUrl,
             OriginalWallpaperPath = context.PreviousWallpaperPath,
             OriginalWallpaperCopy = await stateStore.PreserveWallpaperAsync(context.PreviousWallpaperPath),
             ThemeWallpaperPath = wallpaperOp?.SourcePath,

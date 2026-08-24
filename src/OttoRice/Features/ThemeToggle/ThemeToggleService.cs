@@ -57,6 +57,9 @@ public sealed class ThemeToggleService(
             await TryRunAsync("glazewm", "command wm-exit", ct);
         }
 
+        // De propósito: Flow Launcher (se gerenciado) não é encerrado aqui — só é iniciado em
+        // TurnOnAsync. Ver comentário lá.
+
         // O wm-exit já derruba o Zebar via shutdown_commands na config padrão; se sobrou, encerra por PID.
         if (state.ManagedApps.Contains("zebar"))
             KillIfRunning("zebar", progress);
@@ -67,6 +70,15 @@ public sealed class ThemeToggleService(
             var stop = await TryRunAsync("yasbc", "stop --silent", ct);
             if (!stop.IsSuccess)
                 KillIfRunning("yasb", progress);
+
+            // yasbc stop devolve antes do processo terminar de fato (soltar o lock de
+            // instância única e desregistrar o AppBar). Sem esperar, um TurnOn logo em
+            // seguida colide com o processo antigo ainda saindo: a nova instância vê
+            // "Another instance of the YASB is already running", aborta, e a barra some
+            // até o próximo reload manual — foi exatamente isso que aconteceu numa
+            // instalação real (yasb.log mostra stop→start com ~3s de intervalo e a
+            // segunda instância se autoencerrando).
+            await WaitForProcessExitAsync("yasb", TimeSpan.FromSeconds(5), ct);
 
             progress?.Invoke("Desabilitando o autostart do YASB (reversível)...");
             await TryRunAsync("yasbc", "disable-autostart", ct);
@@ -121,6 +133,24 @@ public sealed class ThemeToggleService(
             }
         }
 
+        // Flow Launcher só é INICIADO no ligar — nunca encerrado no desligar (ver TurnOffAsync).
+        // Diferente do GlazeWM/YASB, ele não é visualmente disruptivo de deixar rodando (não
+        // tila janelas nem ocupa uma barra de tela) — matá-lo a cada toggle off só derrubaria
+        // o launcher do usuário sem necessidade.
+        if (state.ManagedApps.Contains("flow_launcher") && runner.FindProcessIds("Flow.Launcher").Count == 0)
+        {
+            var flowLauncher = resolver.Resolve("Flow.Launcher");
+            if (flowLauncher is not null)
+            {
+                progress?.Invoke("Iniciando o Flow Launcher...");
+                runner.StartDetached(flowLauncher, "");
+            }
+            else
+            {
+                progress?.Invoke("⚠ Flow Launcher não encontrado — não iniciado.");
+            }
+        }
+
         await stateStore.WriteAsync(state with { IsEnabled = true }, ct);
         logger?.LogInformation("Tema {ThemeId} ligado.", state.ActiveThemeId);
         return Result.Ok();
@@ -148,6 +178,16 @@ public sealed class ThemeToggleService(
             logger?.LogWarning(ex, "Não foi possível restaurar o papel de parede anterior.");
             progress?.Invoke($"⚠ Não foi possível restaurar o papel de parede: {ex.Message}");
         }
+    }
+
+    private async Task WaitForProcessExitAsync(string processName, TimeSpan timeout, CancellationToken ct)
+    {
+        var deadline = DateTime.UtcNow + timeout;
+        while (runner.FindProcessIds(processName).Count > 0 && DateTime.UtcNow < deadline)
+            await Task.Delay(200, ct);
+
+        if (runner.FindProcessIds(processName).Count > 0)
+            logger?.LogWarning("'{ProcessName}' ainda rodando após {Timeout}s de espera pelo encerramento.", processName, timeout.TotalSeconds);
     }
 
     private void KillIfRunning(string processName, Action<string>? progress)

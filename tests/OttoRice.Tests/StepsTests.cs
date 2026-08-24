@@ -98,6 +98,7 @@ public class ReloadStepTests
         var reloader = Substitute.For<IAppReloader>();
         reloader.ReloadAsync(Arg.Any<ReloadAction>(), Arg.Any<CancellationToken>())
                 .Returns(Result.Fail("não encontrado"));
+        var runner = Substitute.For<IProcessRunner>();
 
         var context = new InstallContext
         {
@@ -107,7 +108,7 @@ public class ReloadStepTests
         context.Operations.Add(new FileOperation(
             new RiceTarget { App = "glazewm", Action = "override", Source = "s" }, "a", "b"));
 
-        var result = await new ReloadStep(reloader).ExecuteAsync(context);
+        var result = await new ReloadStep(reloader, runner).ExecuteAsync(context);
 
         Assert.True(result.IsSuccess);
         await reloader.Received(1).ReloadAsync(ReloadAction.GlazeWm, Arg.Any<CancellationToken>());
@@ -118,6 +119,7 @@ public class ReloadStepTests
     {
         var reloader = Substitute.For<IAppReloader>();
         reloader.ReloadAsync(Arg.Any<ReloadAction>(), Arg.Any<CancellationToken>()).Returns(Result.Ok());
+        var runner = Substitute.For<IProcessRunner>();
 
         var context = new InstallContext
         {
@@ -130,10 +132,60 @@ public class ReloadStepTests
         context.Operations.Add(new FileOperation(
             new RiceTarget { App = "wallpaper", Action = "set", Source = "w" }, "w", ""));
 
-        await new ReloadStep(reloader).ExecuteAsync(context);
+        await new ReloadStep(reloader, runner).ExecuteAsync(context);
 
         await reloader.Received(1).ReloadAsync(ReloadAction.GlazeWm, Arg.Any<CancellationToken>());
         await reloader.DidNotReceive().ReloadAsync(ReloadAction.Wallpaper, Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Warns_when_expected_process_is_not_running_after_reload()
+    {
+        var reloader = Substitute.For<IAppReloader>();
+        reloader.ReloadAsync(Arg.Any<ReloadAction>(), Arg.Any<CancellationToken>()).Returns(Result.Ok());
+        reloader.ExpectedProcessName(ReloadAction.GlazeWm).Returns("glazewm");
+        var runner = Substitute.For<IProcessRunner>();
+        runner.FindProcessIds("glazewm").Returns([]); // nunca aparece — simula start falho/lento
+
+        var log = new List<string>();
+        var context = new InstallContext
+        {
+            Manifest = new RiceManifest { ThemeId = "t", Name = "T" },
+            ThemeDirectory = Path.GetTempPath(),
+            Progress = log.Add,
+        };
+        context.Operations.Add(new FileOperation(
+            new RiceTarget { App = "glazewm", Action = "override", Source = "s" }, "a", "b"));
+
+        var result = await new ReloadStep(reloader, runner, verifyTimeout: TimeSpan.FromMilliseconds(50))
+            .ExecuteAsync(context);
+
+        Assert.True(result.IsSuccess); // warning, não falha o pipeline
+        Assert.Contains(log, l => l.Contains("glazewm") && l.Contains("não parece estar rodando"));
+    }
+
+    [Fact]
+    public async Task Does_not_warn_when_expected_process_is_running()
+    {
+        var reloader = Substitute.For<IAppReloader>();
+        reloader.ReloadAsync(Arg.Any<ReloadAction>(), Arg.Any<CancellationToken>()).Returns(Result.Ok());
+        reloader.ExpectedProcessName(ReloadAction.GlazeWm).Returns("glazewm");
+        var runner = Substitute.For<IProcessRunner>();
+        runner.FindProcessIds("glazewm").Returns([1234]);
+
+        var log = new List<string>();
+        var context = new InstallContext
+        {
+            Manifest = new RiceManifest { ThemeId = "t", Name = "T" },
+            ThemeDirectory = Path.GetTempPath(),
+            Progress = log.Add,
+        };
+        context.Operations.Add(new FileOperation(
+            new RiceTarget { App = "glazewm", Action = "override", Source = "s" }, "a", "b"));
+
+        await new ReloadStep(reloader, runner).ExecuteAsync(context);
+
+        Assert.DoesNotContain(log, l => l.Contains("não parece estar rodando"));
     }
 }
 
@@ -201,6 +253,67 @@ public class AppReloaderTests
 
         Assert.False(result.IsSuccess);
         Assert.Contains("não encontrado", result.Error);
+    }
+
+    [Fact]
+    public async Task FlowLauncher_does_nothing_when_already_running()
+    {
+        var runner = Substitute.For<IProcessRunner>();
+        runner.FindProcessIds("Flow.Launcher").Returns([555]);
+
+        var result = await new AppReloader(runner, Resolver()).ReloadAsync(ReloadAction.FlowLauncher);
+
+        Assert.True(result.IsSuccess);
+        runner.DidNotReceiveWithAnyArgs().StartDetached(default!, default!);
+    }
+
+    [Fact]
+    public async Task FlowLauncher_starts_detached_when_not_running()
+    {
+        const string flowPath = @"C:\Users\x\AppData\Local\FlowLauncher\Flow.Launcher.exe";
+        var runner = Substitute.For<IProcessRunner>();
+        runner.FindProcessIds("Flow.Launcher").Returns([]);
+        var resolver = Substitute.For<IExecutableResolver>();
+        resolver.Resolve("Flow.Launcher").Returns(flowPath);
+
+        var result = await new AppReloader(runner, resolver).ReloadAsync(ReloadAction.FlowLauncher);
+
+        Assert.True(result.IsSuccess);
+        runner.Received(1).StartDetached(flowPath, "");
+    }
+
+    [Fact]
+    public async Task FlowLauncher_reports_clearly_when_not_found()
+    {
+        var runner = Substitute.For<IProcessRunner>();
+        runner.FindProcessIds("Flow.Launcher").Returns([]);
+        var resolver = Substitute.For<IExecutableResolver>();
+        resolver.Resolve("Flow.Launcher").Returns((string?)null);
+
+        var result = await new AppReloader(runner, resolver).ReloadAsync(ReloadAction.FlowLauncher);
+
+        Assert.False(result.IsSuccess);
+        Assert.Contains("não encontrado", result.Error);
+    }
+
+    [Theory]
+    [InlineData(ReloadAction.GlazeWm, "glazewm")]
+    [InlineData(ReloadAction.Yasb, "yasb")]
+    [InlineData(ReloadAction.Zebar, "zebar")]
+    [InlineData(ReloadAction.FlowLauncher, "Flow.Launcher")]
+    public void ExpectedProcessName_maps_persistent_actions(ReloadAction action, string expected)
+    {
+        var reloader = new AppReloader(Substitute.For<IProcessRunner>(), Substitute.For<IExecutableResolver>());
+        Assert.Equal(expected, reloader.ExpectedProcessName(action));
+    }
+
+    [Theory]
+    [InlineData(ReloadAction.None)]
+    [InlineData(ReloadAction.Wallpaper)]
+    public void ExpectedProcessName_is_null_for_non_persistent_actions(ReloadAction action)
+    {
+        var reloader = new AppReloader(Substitute.For<IProcessRunner>(), Substitute.For<IExecutableResolver>());
+        Assert.Null(reloader.ExpectedProcessName(action));
     }
 }
 

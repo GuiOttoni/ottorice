@@ -122,6 +122,22 @@ Font (como o `blackturq` e o `voidhaze`). Sem uma Nerd Font instalada (ex.:
 JetBrainsMono Nerd Font), os ícones aparecem como caixas vazias — a barra continua
 funcional, só sem os símbolos.
 
+## Visual do YASB — tema "WinUI11"
+
+`configs/yasb/{config.yaml,styles.css}` são adaptados do tema comunitário
+[WinUI11](https://yasb.dev/themes) (autor amnweb, [amnweb/yasb-themes](https://github.com/amnweb/yasb-themes)) —
+visual flat, no estilo nativo do Windows 11 (widgets sem fundo permanente, só destaque no
+hover), recolorido pra paleta Catppuccin Mocha (fundo/texto/bordas Mocha, destaque em
+mauve `#cba6f7`). Só depende de Segoe UI/Segoe Fluent Icons, que já vêm com o Windows 11 —
+diferente dos outros widgets do tema (wifi/volume/battery/power_menu, listados acima), não
+precisa de Nerd Font. A instalação original é feita pelo `yasb_themes.exe` (Themes Manager
+gráfico e interativo do YASB), mas o OttoRice não passa por ele — os arquivos crus do tema
+(config.yaml/styles.css) são baixados direto do repositório e aplicados como qualquer
+outro target do manifesto (`action: override`), sem nenhuma etapa manual. Únicas mudanças
+de conteúdo: adicionado `glazewm_workspaces` (o WinUI11 original não tem nenhum widget de
+window manager) e mantido o `taskbar` que já substituía a nativa nas versões anteriores
+deste exemplo.
+
 ## Como usar
 
 Copie a pasta, ajuste o que quiser e publique num repo GitHub; no OttoRice, cole a URL

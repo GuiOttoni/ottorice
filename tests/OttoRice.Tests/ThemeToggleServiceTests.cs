@@ -130,6 +130,50 @@ public class ThemeToggleServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task TurnOn_starts_flow_launcher_when_managed_and_not_running()
+    {
+        var state = await SeedEnabledThemeAsync();
+        state = state with { ManagedApps = [.. state.ManagedApps, "flow_launcher"] };
+        await _store.WriteAsync(state with { IsEnabled = false });
+        _resolver.Resolve("Flow.Launcher").Returns(@"C:\Users\x\AppData\Local\FlowLauncher\Flow.Launcher.exe");
+        _runner.FindProcessIds("Flow.Launcher").Returns([]);
+
+        var result = await _toggle.TurnOnAsync();
+
+        Assert.True(result.IsSuccess, result.Error);
+        _runner.Received(1).StartDetached(
+            @"C:\Users\x\AppData\Local\FlowLauncher\Flow.Launcher.exe", "");
+    }
+
+    [Fact]
+    public async Task TurnOn_does_not_start_flow_launcher_again_if_already_running()
+    {
+        var state = await SeedEnabledThemeAsync();
+        state = state with { ManagedApps = [.. state.ManagedApps, "flow_launcher"] };
+        await _store.WriteAsync(state with { IsEnabled = false });
+        _runner.FindProcessIds("Flow.Launcher").Returns([777]);
+
+        var result = await _toggle.TurnOnAsync();
+
+        Assert.True(result.IsSuccess, result.Error);
+        _runner.DidNotReceive().StartDetached("Flow.Launcher", Arg.Any<string>());
+        _runner.DidNotReceive().StartDetached(
+            Arg.Is<string>(p => p.Contains("Flow.Launcher.exe")), Arg.Any<string>());
+    }
+
+    [Fact]
+    public async Task TurnOff_never_kills_flow_launcher()
+    {
+        var state = await SeedEnabledThemeAsync();
+        await _store.WriteAsync(state with { ManagedApps = [.. state.ManagedApps, "flow_launcher"] });
+        _runner.FindProcessIds("Flow.Launcher").Returns([888]);
+
+        await _toggle.TurnOffAsync();
+
+        _runner.DidNotReceive().TryKill(888);
+    }
+
+    [Fact]
     public async Task Preserve_wallpaper_copies_file_into_local_vault()
     {
         var original = CreateFile("wall.png");

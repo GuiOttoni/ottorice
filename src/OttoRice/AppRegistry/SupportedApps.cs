@@ -10,6 +10,9 @@ public enum ReloadAction
     Yasb,
     Zebar,
     Wallpaper,
+    /// <summary>App-launcher persistente (tipo Spotlight/Alfred/PowerToys Run) — não tem CLI de
+    /// reload, só precisa estar rodando: inicia se não estiver, não faz nada se já estiver.</summary>
+    FlowLauncher,
 }
 
 public sealed record AppDefinition(
@@ -89,11 +92,16 @@ public static class SupportedApps
                 ReloadAction.None,
                 ConfigRoot: @"%APPDATA%\fastfetch"),
 
+            // Diferente dos outros quatro apps deste bloco, o Flow Launcher é um launcher
+            // persistente (fica rodando em background, tipo Spotlight/Alfred/PowerToys Run) —
+            // depois de instalado ele precisa estar de fato em execução, não só ter a config
+            // escrita. ReloadAction.FlowLauncher cobre isso (ver AppReloader): sem CLI de
+            // reload, só sobe o processo se ele não estiver rodando.
             ["flow_launcher"] = new(
                 "flow_launcher", "Flow Launcher",
                 [@"%APPDATA%\FlowLauncher\Settings\Settings.json"],
                 new HashSet<string> { "override" },
-                ReloadAction.None,
+                ReloadAction.FlowLauncher,
                 ConfigRoot: @"%APPDATA%\FlowLauncher\Settings"),
 
             // Sem ConfigPaths: o oh-my-posh não lê um arquivo de nome/local fixo — o tema
