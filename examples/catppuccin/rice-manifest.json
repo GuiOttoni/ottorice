@@ -59,6 +59,18 @@
       "app": "wallpaper",
       "action": "set",
       "source": "assets/wallpaper.png"
+    },
+    {
+      "app": "windows-11-taskbar-styler",
+      "action": "configure_mod"
+    },
+    {
+      "app": "windows-11-start-menu-styler",
+      "action": "configure_mod"
+    },
+    {
+      "app": "windows-11-notification-center-styler",
+      "action": "configure_mod"
     }
   ]
 }

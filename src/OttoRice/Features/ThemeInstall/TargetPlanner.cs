@@ -28,6 +28,15 @@ public sealed class TargetPlanner(
         foreach (var target in manifest.Targets)
         {
             var app = SupportedApps.All[target.App!];
+
+            // Mods Windhawk não têm source (é config de arquivo nenhum) — settings vêm do
+            // próprio target, lidas direto pelo ConfigureWindhawkModsStep.
+            if (target.Action == "configure_mod")
+            {
+                operations.Add(new FileOperation(target, SourcePath: "", TargetPath: ""));
+                continue;
+            }
+
             var sourcePath = Path.GetFullPath(Path.Combine(themeRoot, target.Source!));
 
             // Defesa em profundidade: o validator já barra "..", mas nunca opere fora do tema.

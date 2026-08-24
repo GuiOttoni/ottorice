@@ -102,6 +102,10 @@ public partial class App : Application
                 sp.GetRequiredService<IWallpaperService>(),
                 sp.GetService<ILogger<ApplyStep>>()),
             new ReloadStep(sp.GetRequiredService<IAppReloader>(), sp.GetService<ILogger<ReloadStep>>()),
+            new ConfigureWindhawkModsStep(
+                sp.GetRequiredService<IExecutableResolver>(),
+                sp.GetRequiredService<IProcessRunner>(),
+                sp.GetService<ILogger<ConfigureWindhawkModsStep>>()),
         ], sp.GetService<ILogger<InstallPipeline>>()));
 
         return services.BuildServiceProvider();

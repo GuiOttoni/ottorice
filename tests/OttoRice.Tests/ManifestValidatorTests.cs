@@ -115,6 +115,76 @@ public class ManifestValidatorTests
     }
 
     [Fact]
+    public void Configure_mod_without_settings_passes()
+    {
+        // settings é opcional: sem ele, só instala/habilita o mod com os valores default.
+        var manifest = ValidManifest() with
+        {
+            Targets = [new RiceTarget { App = "windows-11-taskbar-styler", Action = "configure_mod" }],
+        };
+        Assert.Empty(ManifestValidator.Validate(manifest));
+    }
+
+    [Fact]
+    public void Configure_mod_with_valid_settings_passes()
+    {
+        var manifest = ValidManifest() with
+        {
+            Targets =
+            [
+                new RiceTarget
+                {
+                    App = "windows-11-taskbar-styler",
+                    Action = "configure_mod",
+                    Settings = new() { ["theme"] = "FrostyGlass", ["styleConstants[0]"] = "accent: #cba6f7" },
+                },
+            ],
+        };
+        Assert.Empty(ManifestValidator.Validate(manifest));
+    }
+
+    [Theory]
+    [InlineData("theme; rm -rf")]
+    [InlineData("theme value")]
+    public void Configure_mod_with_unsafe_settings_key_fails(string key)
+    {
+        var manifest = ValidManifest() with
+        {
+            Targets =
+            [
+                new RiceTarget
+                {
+                    App = "windows-11-taskbar-styler",
+                    Action = "configure_mod",
+                    Settings = new() { [key] = "x" },
+                },
+            ],
+        };
+        Assert.Contains(ManifestValidator.Validate(manifest), e => e.Contains("chave"));
+    }
+
+    [Theory]
+    [InlineData("ok\" & del /f /q C:\\* & \"")]
+    [InlineData("line1\nline2")]
+    [InlineData("100% & calc")]
+    public void Configure_mod_with_unsafe_settings_value_fails(string value)
+    {
+        var manifest = ValidManifest() with
+        {
+            Targets =
+            [
+                new RiceTarget
+                {
+                    App = "windows-11-taskbar-styler",
+                    Action = "configure_mod",
+                    Settings = new() { ["theme"] = value },
+                },
+            ],
+        };
+        Assert.Contains(ManifestValidator.Validate(manifest), e => e.Contains("valor"));
+    }
+
+    [Fact]
     public void Parse_rejects_malformed_json()
     {
         var result = ManifestValidator.Parse("{ isso não é json");

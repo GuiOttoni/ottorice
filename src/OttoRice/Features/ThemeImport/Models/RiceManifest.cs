@@ -27,4 +27,12 @@ public sealed record RiceTarget
     [JsonPropertyName("action")] public string? Action { get; init; }
     [JsonPropertyName("source")] public string? Source { get; init; }
     [JsonPropertyName("setAsDefault")] public bool SetAsDefault { get; init; }
+
+    /// <summary>
+    /// Pares chave/valor pra ação "configure_mod" (mods Windhawk) — repassados como
+    /// `windhawk-cli mod settings set &lt;id&gt; chave=valor`. O windhawk-core valida cada
+    /// chave contra o schema de settings declarado pelo próprio mod antes de escrever
+    /// (chave desconhecida = erro), então não é um canal livre de dados arbitrários.
+    /// </summary>
+    [JsonPropertyName("settings")] public Dictionary<string, string>? Settings { get; init; }
 }

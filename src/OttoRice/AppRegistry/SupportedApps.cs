@@ -106,6 +106,24 @@ public static class SupportedApps
                 new HashSet<string> { "override" },
                 ReloadAction.None,
                 ConfigRoot: @"%LOCALAPPDATA%\OttoRice\ohmyposh"),
+
+            // Mods do Windhawk (ação "configure_mod", ver ConfigureWindhawkModsStep): não são
+            // config de arquivo — Id aqui É o id real do mod no repositório do Windhawk,
+            // repassado só pro `windhawk-cli`, nunca lido do manifesto diretamente (o
+            // manifesto só pode referenciar estas três chaves da whitelist). Windhawk em si
+            // não é instalado pelo OttoRice (só a build 2.0 alpha tem o `windhawk-cli`, ainda
+            // não está no WinGet) — é pré-requisito manual, ver README dos temas.
+            ["windows-11-taskbar-styler"] = new(
+                "windows-11-taskbar-styler", "Windows 11 Taskbar Styler (Windhawk)",
+                [], new HashSet<string> { "configure_mod" }, ReloadAction.None),
+
+            ["windows-11-start-menu-styler"] = new(
+                "windows-11-start-menu-styler", "Windows 11 Start Menu Styler (Windhawk)",
+                [], new HashSet<string> { "configure_mod" }, ReloadAction.None),
+
+            ["windows-11-notification-center-styler"] = new(
+                "windows-11-notification-center-styler", "Windows 11 Notification Center Styler (Windhawk)",
+                [], new HashSet<string> { "configure_mod" }, ReloadAction.None),
         };
 
     public static bool IsSupported(string appId) => All.ContainsKey(appId);

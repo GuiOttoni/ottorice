@@ -203,3 +203,117 @@ public class AppReloaderTests
         Assert.Contains("não encontrado", result.Error);
     }
 }
+
+public class ConfigureWindhawkModsStepTests
+{
+    private static InstallContext Context(params RiceTarget[] targets)
+    {
+        var context = new InstallContext
+        {
+            Manifest = new RiceManifest { ThemeId = "t", Name = "T" },
+            ThemeDirectory = Path.GetTempPath(),
+        };
+        foreach (var target in targets)
+            context.Operations.Add(new FileOperation(target, "", ""));
+        return context;
+    }
+
+    private static RiceTarget ModTarget(string app = "windows-11-taskbar-styler", string? theme = "FrostyGlass") => new()
+    {
+        App = app,
+        Action = "configure_mod",
+        Settings = theme is null ? new() : new() { ["theme"] = theme },
+    };
+
+    [Fact]
+    public async Task No_mod_targets_is_a_noop()
+    {
+        var runner = Substitute.For<IProcessRunner>();
+        var result = await new ConfigureWindhawkModsStep(Substitute.For<IExecutableResolver>(), runner)
+            .ExecuteAsync(Context(new RiceTarget { App = "glazewm", Action = "override" }));
+
+        Assert.True(result.IsSuccess);
+        await runner.DidNotReceiveWithAnyArgs().RunElevatedAsync(default!, default!);
+    }
+
+    [Fact]
+    public async Task Missing_windhawk_cli_is_non_fatal_and_skips()
+    {
+        var resolver = Substitute.For<IExecutableResolver>();
+        resolver.Resolve("windhawk-cli").Returns((string?)null);
+        var runner = Substitute.For<IProcessRunner>();
+
+        var context = Context(ModTarget());
+        var result = await new ConfigureWindhawkModsStep(resolver, runner).ExecuteAsync(context);
+
+        Assert.True(result.IsSuccess);
+        await runner.DidNotReceiveWithAnyArgs().RunElevatedAsync(default!, default!);
+    }
+
+    private static InstallContext ContextWithLog(List<string> log, params RiceTarget[] targets)
+    {
+        var context = new InstallContext
+        {
+            Manifest = new RiceManifest { ThemeId = "t", Name = "T" },
+            ThemeDirectory = Path.GetTempPath(),
+            Progress = log.Add,
+        };
+        foreach (var target in targets)
+            context.Operations.Add(new FileOperation(target, "", ""));
+        return context;
+    }
+
+    [Fact]
+    public async Task Success_runs_one_elevated_batch_and_reports_success()
+    {
+        var resolver = Substitute.For<IExecutableResolver>();
+        resolver.Resolve("windhawk-cli").Returns(@"C:\Program Files\Windhawk\windhawk-cli.exe");
+        var runner = Substitute.For<IProcessRunner>();
+        runner.RunElevatedAsync("cmd.exe", Arg.Any<string>(), Arg.Any<CancellationToken>())
+              .Returns(Task.FromResult<int?>(0));
+
+        var log = new List<string>();
+        var context = ContextWithLog(log, ModTarget());
+
+        var result = await new ConfigureWindhawkModsStep(resolver, runner).ExecuteAsync(context);
+
+        Assert.True(result.IsSuccess);
+        await runner.Received(1).RunElevatedAsync(
+            "cmd.exe", Arg.Is<string>(a => a.Contains("/c") && a.Contains(".cmd")), Arg.Any<CancellationToken>());
+        Assert.Contains(log, l => l.Contains("configurados"));
+    }
+
+    [Fact]
+    public async Task Uac_cancelled_is_non_fatal_and_reports_warning()
+    {
+        var resolver = Substitute.For<IExecutableResolver>();
+        resolver.Resolve("windhawk-cli").Returns(@"C:\Program Files\Windhawk\windhawk-cli.exe");
+        var runner = Substitute.For<IProcessRunner>();
+        runner.RunElevatedAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
+              .Returns(Task.FromResult<int?>(null));
+
+        var log = new List<string>();
+        var context = ContextWithLog(log, ModTarget());
+
+        var result = await new ConfigureWindhawkModsStep(resolver, runner).ExecuteAsync(context);
+
+        Assert.True(result.IsSuccess);
+        Assert.Contains(log, l => l.Contains("UAC"));
+    }
+
+    [Theory]
+    [InlineData("ok\" & del /f /q C:\\* & \"")]
+    [InlineData("has spaces\r\ninjected")]
+    public async Task Unsafe_settings_value_aborts_before_touching_the_cli(string unsafeValue)
+    {
+        var resolver = Substitute.For<IExecutableResolver>();
+        var runner = Substitute.For<IProcessRunner>();
+
+        var context = Context(ModTarget(theme: unsafeValue));
+        var result = await new ConfigureWindhawkModsStep(resolver, runner).ExecuteAsync(context);
+
+        Assert.True(result.IsSuccess); // melhor esforço: não derruba o pipeline
+        resolver.DidNotReceiveWithAnyArgs().Resolve(default!);
+        await runner.DidNotReceiveWithAnyArgs().RunElevatedAsync(default!, default!);
+    }
+}

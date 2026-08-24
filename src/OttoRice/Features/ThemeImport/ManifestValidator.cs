@@ -25,6 +25,18 @@ public static partial class ManifestValidator
     [GeneratedRegex(@"^[A-Za-z0-9][A-Za-z0-9\.\-\+_]*$")]
     private static partial Regex WingetIdPattern();
 
+    [GeneratedRegex(@"^[A-Za-z0-9_.\[\]-]+$")]
+    private static partial Regex WindhawkSettingsKeyPattern();
+
+    /// <summary>
+    /// Sem `&amp;|&lt;&gt;^"%` (metacaracteres do cmd.exe) nem controle/quebra de linha — os
+    /// valores acabam interpolados num script .cmd rodado elevado
+    /// (<c>ConfigureWindhawkModsStep</c>). Mesmo raciocínio do <see cref="WingetIdPattern"/>:
+    /// dado vindo de um tema de terceiros nunca entra numa linha de comando sem checagem.
+    /// </summary>
+    [GeneratedRegex("""[&|<>^"%\r\n\x00]""")]
+    private static partial Regex WindhawkUnsafeValueCharsPattern();
+
     public static IReadOnlyList<string> Validate(RiceManifest manifest)
     {
         var errors = new List<string>();
@@ -63,8 +75,23 @@ public static partial class ManifestValidator
                 errors.Add($"{label}: ação '{target.Action}' não permitida para '{target.App}' " +
                            $"(permitidas: {string.Join(", ", definition.AllowedActions)}).");
 
-            if (!IsSafeRelativeSource(target.Source))
+            // "configure_mod" (mods Windhawk) não copia arquivo — não tem source. "settings"
+            // é opcional: sem settings, só instala/habilita o mod com os valores default (ou
+            // os que o usuário já tiver escolhido antes na galeria de temas do próprio mod).
+            if (target.Action == "configure_mod")
+            {
+                foreach (var (key, value) in target.Settings ?? [])
+                {
+                    if (!WindhawkSettingsKeyPattern().IsMatch(key))
+                        errors.Add($"{label}: chave de settings inválida: '{key}'.");
+                    if (WindhawkUnsafeValueCharsPattern().IsMatch(value ?? ""))
+                        errors.Add($"{label}: valor de settings['{key}'] contém caractere não permitido.");
+                }
+            }
+            else if (!IsSafeRelativeSource(target.Source))
+            {
                 errors.Add($"{label}: source '{target.Source}' deve ser um caminho relativo dentro do repo do tema.");
+            }
         }
 
         return errors;

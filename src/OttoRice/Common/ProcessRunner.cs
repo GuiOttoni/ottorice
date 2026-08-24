@@ -1,4 +1,6 @@
+using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading;
@@ -16,6 +18,14 @@ public interface IProcessRunner
 
     /// <summary>Inicia um processo de longa duração (WM, barra) sem aguardar a saída.</summary>
     void StartDetached(string fileName, string arguments);
+
+    /// <summary>
+    /// Roda elevado (prompt de UAC) e aguarda a saída. UseShellExecute é exigido pelo verbo
+    /// "runas" — por isso não dá pra redirecionar stdout/stderr aqui (limitação do Windows);
+    /// quem precisar de log deve fazer o próprio processo elevado escrever num arquivo.
+    /// Retorna null se o usuário cancelar o prompt de UAC (não é uma falha do processo em si).
+    /// </summary>
+    Task<int?> RunElevatedAsync(string fileName, string arguments, CancellationToken ct = default);
 
     /// <summary>PIDs vivos com esse nome de processo (sem extensão).</summary>
     IReadOnlyList<int> FindProcessIds(string processName);
@@ -58,6 +68,38 @@ public sealed class ProcessRunner(ILogger<ProcessRunner>? logger = null) : IProc
             CreateNoWindow = true,
         });
         logger?.LogInformation("Processo iniciado (detached): '{FileName} {Arguments}'.", fileName, arguments);
+    }
+
+    public async Task<int?> RunElevatedAsync(string fileName, string arguments, CancellationToken ct = default)
+    {
+        var psi = new ProcessStartInfo
+        {
+            FileName = fileName,
+            Arguments = arguments,
+            UseShellExecute = true,
+            Verb = "runas",
+        };
+
+        Process process;
+        try
+        {
+            process = Process.Start(psi)
+                ?? throw new InvalidOperationException($"Não foi possível iniciar o processo elevado '{fileName}'.");
+        }
+        catch (Win32Exception ex) when (ex.NativeErrorCode == 1223) // ERROR_CANCELLED
+        {
+            logger?.LogWarning("Usuário cancelou o prompt de UAC para '{FileName}'.", fileName);
+            return null;
+        }
+
+        using (process)
+        {
+            await process.WaitForExitAsync(ct);
+            logger?.LogInformation(
+                "Processo elevado '{FileName} {Arguments}' saiu com código {ExitCode}.",
+                fileName, arguments, process.ExitCode);
+            return process.ExitCode;
+        }
     }
 
     public IReadOnlyList<int> FindProcessIds(string processName)

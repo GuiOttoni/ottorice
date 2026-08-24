@@ -155,5 +155,26 @@ public class TargetPlannerTests : IDisposable
         Assert.EndsWith(@"OttoRice\ohmyposh\catppuccin.omp.json", Assert.Single(plan.Value!).TargetPath);
     }
 
+    [Fact]
+    public void Configure_mod_produces_operation_with_no_file_paths()
+    {
+        // Mods Windhawk não copiam arquivo — settings ficam só no Target, lidos direto
+        // pelo ConfigureWindhawkModsStep.
+        var manifest = Manifest(new RiceTarget
+        {
+            App = "windows-11-taskbar-styler",
+            Action = "configure_mod",
+            Settings = new() { ["theme"] = "FrostyGlass" },
+        });
+
+        var plan = _planner.Build(manifest, _themeDir);
+
+        Assert.True(plan.IsSuccess, plan.Error);
+        var op = Assert.Single(plan.Value!);
+        Assert.Equal("", op.SourcePath);
+        Assert.Equal("", op.TargetPath);
+        Assert.Equal("FrostyGlass", op.Target.Settings!["theme"]);
+    }
+
     public void Dispose() => Directory.Delete(_dir, recursive: true);
 }

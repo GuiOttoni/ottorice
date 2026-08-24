@@ -5,12 +5,12 @@ Réplica, dentro do que o formato de manifesto do OttoRice permite, das features
 Windows Terminal, VS Code, Zed, Fastfetch, Flow Launcher e Oh My Posh, todos na paleta
 [Catppuccin Mocha](https://catppuccin.com/palette) oficial.
 
-> ⚠️ **O OttoRice não mexe na taskbar/menu Iniciar/central de notificações nativos** — nem
-> pra esconder, nem pra restilizar. Esse controle é só do **[Windhawk](https://windhawk.net/)**
-> (por decisão do usuário, pra evitar dois mecanismos disputando a mesma taskbar). Baixe e
-> instale manualmente em **https://windhawk.net/** — não vem pelo OttoRice — e ative por lá
-> os mods *Taskbar Styler*, *Start Menu Styler* e *Notification Center Styler*. Detalhes em
-> "Windhawk — por que não dá pra automatizar" abaixo.
+> ⚠️ **O OttoRice não instala o Windhawk.** Baixe e instale manualmente em
+> **https://windhawk.net/** (build **2.0 alpha** ou mais recente — é a que traz o
+> `windhawk-cli`; a versão estável 1.7.3 do WinGet não tem) antes de instalar este tema.
+> Depois disso, o OttoRice **instala e habilita** os três mods (*Taskbar Styler*, *Start
+> Menu Styler*, *Notification Center Styler*) via `windhawk-cli` — um único prompt de UAC
+> pros três juntos. Detalhes em "Windhawk — automação via `windhawk-cli`" abaixo.
 
 ## Conteúdo
 
@@ -39,7 +39,7 @@ assets/wallpaper.png, assets/preview.png     gerados nesta sessão (gradiente + 
 | ⚙️ Fastfetch                                        | ✅ `fastfetch` — módulos básicos |
 | 🚀 Flow Launcher                                    | ✅ `flow_launcher` — hotkey/idioma; **não** inclui um tema Catppuccin específico (ver nota) |
 | 🐚 PowerShell config                                | ❌ Fora de escopo por design — ver nota |
-| 🦅 Taskbar/Start menu/Notification center (Windhawk) | ⚠️ **Baixe à parte**: [windhawk.net](https://windhawk.net/) — ver aviso no topo e nota abaixo |
+| 🦅 Taskbar/Start menu/Notification center (Windhawk) | ⚠️ **Windhawk baixado à parte** ([windhawk.net](https://windhawk.net/), build 2.0+), mods instalados/habilitados pelo OttoRice via `windhawk-cli` — ver nota abaixo |
 | 💫 Wallpapers                                       | ✅ `wallpaper` — gerado nesta sessão (gradiente + glow mauve/blue/pink) |
 | 🐈 Catppuccin everywhere                            | ✅ é a paleta de todo o tema, não um target próprio |
 
@@ -64,15 +64,30 @@ adicionar essa linha no seu `$PROFILE` apontando pra esse caminho. Alternativa m
 Mocha que já vem embutido na instalação —
 `oh-my-posh init pwsh --config "$env:POSH_THEMES_PATH\catppuccin_mocha.omp.json" | Invoke-Expression`.
 
-### Windhawk — por que não dá pra automatizar
+### Windhawk — automação via `windhawk-cli`
 
-Windhawk (usado pelo windots pros mods *Taskbar Styler*, *Start Menu Styler* e
-*Notification Center Styler*) é configurado pela própria interface do Windhawk — os mods
-são habilitados/ajustados por lá, não por um arquivo de config que o
-`FileOverrideApplier` possa copiar. Fora do escopo do OttoRice hoje: o manifesto deste
-tema **não instala nem configura o Windhawk**. Baixe manualmente em
-**https://windhawk.net/** e ative os mods pela interface dele — funciona em paralelo ao
-GlazeWM/YASB deste tema sem conflito.
+O Windhawk 2.0 (ainda em alpha) ganhou um CLI oficial (`windhawk-cli.exe`, front-end sobre
+o `windhawk-core.dll` do próprio app) com comandos de instalação/config de mods. O OttoRice
+usa ele pra instalar e habilitar `windows-11-taskbar-styler`, `windows-11-start-menu-styler`
+e `windows-11-notification-center-styler` — os targets `configure_mod` deste manifesto.
+
+- **O Windhawk em si não é instalado pelo OttoRice** — é pré-requisito manual
+  (**https://windhawk.net/**, build 2.0 alpha+). Sem ele instalado, o `ConfigureWindhawkModsStep`
+  detecta a ausência do `windhawk-cli` e pula os três mods (aviso na tela, resto do tema
+  aplica normal — não é bloqueante).
+- **Escrita no windhawk-cli exige elevação (UAC)** — confirmado em testes reais nesta sessão
+  (leitura funciona sem elevação; `mod install`/`mod settings set` retornam "Acesso negado"
+  sem admin). Pra não pedir um UAC por mod, o OttoRice agrupa todas as chamadas dos três
+  mods num único script `.cmd` temporário e roda **um só** prompt elevado pra ele.
+- **Sem preset Catppuccin real**: os temas embutidos no Taskbar Styler (FrostyGlass,
+  RosePine, DockLike, Squircle...) não têm um "Catppuccin" exato — o mais próximo,
+  RosePine, é uma paleta diferente. Por isso os targets aqui só instalam/habilitam os mods
+  (`settings` vazio) em vez de forçar um tema que não bateria com o resto do desktop; escolha
+  visualmente pela galeria do próprio mod (link no README de cada um, via `windhawk-cli mod
+  show <id>`) se quiser ir além do padrão.
+- Se quiser customizar via manifesto, `settings` aceita pares chave/valor validados contra
+  o schema do próprio mod antes de escrever (chave desconhecida = erro, não quebra nada
+  silenciosamente), ex.: `"settings": { "theme": "FrostyGlass" }`.
 
 ### Flow Launcher — por que não tem um tema Catppuccin pronto
 
@@ -94,8 +109,15 @@ funcional, só sem os símbolos.
 Copie a pasta, ajuste o que quiser e publique num repo GitHub; no OttoRice, cole a URL
 (ou use "ARQUIVO..." apontando pro `rice-manifest.json` local pra testar antes de
 publicar). As dependências VS Code/Zed/Fastfetch/Flow Launcher/Oh My Posh são instaladas
-via WinGet como as demais — a única etapa manual que sobra é a extensão Catppuccin em
-cada editor e a linha do `$PROFILE` do Oh My Posh, pelos motivos de segurança acima.
+via WinGet como as demais — as etapas manuais que sobram são: instalar o Windhawk 2.0
+alpha (ver acima), a extensão Catppuccin em cada editor, e a linha do `$PROFILE` do Oh My
+Posh, pelos motivos de segurança já explicados.
+
+**Sobre elevação:** o OttoRice.exe em si continua rodando sem privilégios elevados (não
+muda o `PrivilegesRequired=lowest` do instalador) — só a chamada específica ao
+`windhawk-cli` sobe um prompt de UAC, isolado, sem elevar o GlazeWM/YASB nem o resto do
+app. Evita o problema real de UIPI (Isolamento de Privilégio de Interface do Usuário) que
+rodar um gerenciador de janelas inteiro elevado causaria.
 
 > Configs testados quanto ao formato do manifesto e ao pipeline de instalação
 > (WinGet → backup → aplicar → reload), mas não validados rodando os nove
