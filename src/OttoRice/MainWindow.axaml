@@ -4,170 +4,191 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="using:OttoRice"
         xmlns:backup="using:OttoRice.Features.BackupRestore"
-        mc:Ignorable="d" d:DesignWidth="720" d:DesignHeight="560"
+        mc:Ignorable="d" d:DesignWidth="1000" d:DesignHeight="680"
         x:Class="OttoRice.MainWindow"
         x:DataType="local:MainViewModel"
+        Icon="/Assets/ottorice.ico"
         Title="OttoRice"
-        Width="720" Height="560"
-        WindowStartupLocation="CenterScreen">
+        Width="1000" Height="680"
+        WindowStartupLocation="CenterScreen"
+        Background="{DynamicResource BgDeepBrush}">
 
-    <TabControl Margin="8">
+    <Grid RowDefinitions="56,*,28">
 
-        <TabItem Header="Instalar tema">
-            <Grid RowDefinitions="Auto,Auto,Auto,*,Auto" Margin="12" DataContext="{Binding Install}">
+        <!-- ── Cabeçalho ─────────────────────────────────────────────────── -->
+        <Border Grid.Row="0"
+                Background="{DynamicResource BgPrimaryBrush}"
+                BorderBrush="{DynamicResource BorderBrush2}" BorderThickness="0,0,0,1">
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="16,0">
+                <TextBlock Text="◧" Foreground="{DynamicResource AccentBrush}" FontSize="18" VerticalAlignment="Center" />
+                <TextBlock Text="OTTO" Classes="h1" Margin="8,0,0,0" VerticalAlignment="Center" />
+                <TextBlock Text="RICE" Classes="h1" Foreground="{DynamicResource GoldBrush}" VerticalAlignment="Center" />
+                <TextBlock Text="temas de desktop para windows" Classes="muted" Margin="16,4,0,0" VerticalAlignment="Center" />
+            </StackPanel>
+        </Border>
 
-                <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="8">
-                    <TextBox Text="{Binding ThemeUrl}"
-                             Watermark="https://github.com/owner/repo (com rice-manifest.json)"
-                             Width="480"
-                             IsEnabled="{Binding !IsBusy}"/>
-                    <Button Content="Buscar" Command="{Binding FetchCommand}"/>
-                </StackPanel>
+        <TabControl Grid.Row="1" Background="Transparent">
 
-                <!-- Preview / consentimento informado (RF-03) -->
-                <Border Grid.Row="1" Margin="0,12,0,0" Padding="12"
-                        CornerRadius="6" BorderThickness="1"
-                        BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}"
-                        IsVisible="{Binding HasPreview}">
-                    <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto,Auto">
-                        <TextBlock Grid.Row="0" Grid.Column="0"
-                                   Text="{Binding ThemeTitle}"
-                                   FontSize="16" FontWeight="Bold" TextWrapping="Wrap"/>
-                        <StackPanel Grid.Row="1" Grid.Column="0" Margin="0,8,0,0" Spacing="4">
-                            <TextBlock Text="Apps que serão alterados:" FontWeight="SemiBold"/>
-                            <ItemsControl ItemsSource="{Binding AffectedApps}">
-                                <ItemsControl.ItemTemplate>
-                                    <DataTemplate>
-                                        <TextBlock Text="{Binding StringFormat='• {0}'}"/>
-                                    </DataTemplate>
-                                </ItemsControl.ItemTemplate>
-                            </ItemsControl>
-                            <TextBlock Text="Dependências (WinGet):" FontWeight="SemiBold" Margin="0,6,0,0"/>
-                            <ItemsControl ItemsSource="{Binding Dependencies}">
-                                <ItemsControl.ItemTemplate>
-                                    <DataTemplate>
-                                        <TextBlock Text="{Binding StringFormat='• {0}'}"/>
-                                    </DataTemplate>
-                                </ItemsControl.ItemTemplate>
-                            </ItemsControl>
+            <!-- ══ Instalar tema ══════════════════════════════════════════ -->
+            <TabItem Header="INSTALAR TEMA">
+                <Grid RowDefinitions="Auto,Auto,Auto,*" Margin="20,16" DataContext="{Binding Install}">
+
+                    <StackPanel Grid.Row="0" Spacing="8">
+                        <TextBlock Text="REPOSITÓRIO DO TEMA" Classes="eyebrow" />
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <TextBox Text="{Binding ThemeUrl}"
+                                     Watermark="https://github.com/owner/repo (com rice-manifest.json)"
+                                     Width="620"
+                                     IsEnabled="{Binding !IsBusy}" />
+                            <Button Content="BUSCAR" Classes="btn-secondary" Command="{Binding FetchCommand}" />
                         </StackPanel>
-                        <Image Grid.Row="0" Grid.RowSpan="3" Grid.Column="1"
-                               Source="{Binding PreviewImage}"
-                               MaxWidth="220" MaxHeight="140" Margin="12,0,0,0"
-                               Stretch="Uniform"/>
-                    </Grid>
-                </Border>
-
-                <StackPanel Grid.Row="2" Orientation="Horizontal" Spacing="8" Margin="0,12,0,0">
-                    <Button Content="Instalar tema"
-                            Command="{Binding InstallCommand}"
-                            Classes="accent"/>
-                    <Button Content="Cancelar" Command="{Binding CancelCommand}"/>
-                </StackPanel>
-
-                <!-- Log de progresso do pipeline -->
-                <Border Grid.Row="3" Margin="0,12,0,0" CornerRadius="6" BorderThickness="1"
-                        BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}">
-                    <ScrollViewer>
-                        <ItemsControl ItemsSource="{Binding Log}" Margin="8">
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate>
-                                    <TextBlock Text="{Binding}" FontFamily="Cascadia Mono,Consolas,monospace"
-                                               FontSize="12" TextWrapping="Wrap"/>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
-                    </ScrollViewer>
-                </Border>
-
-                <StackPanel Grid.Row="4" Margin="0,10,0,0" Spacing="6">
-                    <ProgressBar IsIndeterminate="True" IsVisible="{Binding IsBusy}" Height="4"/>
-                    <TextBlock Text="{Binding StatusMessage}" TextWrapping="Wrap"/>
-                </StackPanel>
-            </Grid>
-        </TabItem>
-
-        <TabItem Header="Tema ativo">
-            <Grid RowDefinitions="Auto,Auto,Auto,*,Auto" Margin="12" DataContext="{Binding Control}">
-
-                <StackPanel Grid.Row="0" Spacing="4">
-                    <TextBlock Text="{Binding ThemeTitle}" FontSize="16" FontWeight="Bold" TextWrapping="Wrap"/>
-                    <TextBlock Text="{Binding StateLabel}"/>
-                </StackPanel>
-
-                <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="8" Margin="0,12,0,0">
-                    <Button Content="Ligar tema" Command="{Binding TurnOnCommand}" Classes="accent"/>
-                    <Button Content="Desligar tema" Command="{Binding TurnOffCommand}"/>
-                    <Button Content="Pausar/retomar tiling" Command="{Binding TogglePauseCommand}"/>
-                    <Button Content="Atualizar" Command="{Binding RefreshCommand}"/>
-                </StackPanel>
-
-                <Border Grid.Row="2" Margin="0,16,0,0" Padding="12" CornerRadius="6" BorderThickness="1"
-                        BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}"
-                        IsVisible="{Binding HasActiveTheme}">
-                    <StackPanel Spacing="6">
-                        <TextBlock Text="Desinstalar este tema" FontWeight="SemiBold"/>
-                        <TextBlock TextWrapping="Wrap" FontSize="12"
-                                   Text="As configurações anteriores são restauradas do backup. As ferramentas abaixo só são removidas se você marcar — e apenas quando nenhum outro tema instalado depende delas."/>
-                        <ItemsControl ItemsSource="{Binding RemovableTools}" Margin="0,4,0,0">
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate>
-                                    <CheckBox IsChecked="{Binding RemoveIt}"
-                                              IsEnabled="{Binding CanRemove}"
-                                              Content="{Binding Description}"/>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
-                        <Button Content="Desinstalar tema" Command="{Binding UninstallCommand}"
-                                HorizontalAlignment="Left" Margin="0,6,0,0"/>
                     </StackPanel>
-                </Border>
 
-                <Border Grid.Row="3" Margin="0,12,0,0" CornerRadius="6" BorderThickness="1"
-                        BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}">
-                    <ScrollViewer>
-                        <ItemsControl ItemsSource="{Binding Log}" Margin="8">
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate>
-                                    <TextBlock Text="{Binding}" FontFamily="Cascadia Mono,Consolas,monospace"
-                                               FontSize="12" TextWrapping="Wrap"/>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
-                    </ScrollViewer>
-                </Border>
-
-                <StackPanel Grid.Row="4" Margin="0,10,0,0" Spacing="6">
-                    <ProgressBar IsIndeterminate="True" IsVisible="{Binding IsBusy}" Height="4"/>
-                    <TextBlock Text="{Binding StatusMessage}" TextWrapping="Wrap"/>
-                </StackPanel>
-            </Grid>
-        </TabItem>
-
-        <TabItem Header="Backups">
-            <Grid RowDefinitions="Auto,*,Auto" Margin="12" DataContext="{Binding Backups}">
-                <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="8">
-                    <Button Content="Atualizar" Command="{Binding RefreshCommand}"/>
-                    <Button Content="Restaurar selecionado" Command="{Binding RestoreCommand}"/>
-                </StackPanel>
-
-                <ListBox Grid.Row="1" Margin="0,12,0,0"
-                         ItemsSource="{Binding Sessions}"
-                         SelectedItem="{Binding SelectedSession}">
-                    <ListBox.ItemTemplate>
-                        <DataTemplate x:DataType="backup:BackupSessionInfo">
-                            <StackPanel Orientation="Horizontal" Spacing="12">
-                                <TextBlock Text="{Binding CreatedAt, StringFormat='{}{0:dd/MM/yyyy HH:mm}'}"/>
-                                <TextBlock Text="{Binding ThemeId}" FontWeight="SemiBold"/>
+                    <!-- Preview / consentimento informado (RF-03) -->
+                    <Border Grid.Row="1" Classes="card" Margin="0,16,0,0" IsVisible="{Binding HasPreview}">
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Grid.Column="0" Spacing="10">
+                                <TextBlock Text="{Binding ThemeTitle}" Classes="h2" TextWrapping="Wrap" />
+                                <StackPanel Spacing="3">
+                                    <TextBlock Text="APPS QUE SERÃO ALTERADOS" Classes="eyebrow" />
+                                    <ItemsControl ItemsSource="{Binding AffectedApps}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <TextBlock Text="{Binding StringFormat='› {0}'}" Classes="dim" />
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </StackPanel>
+                                <StackPanel Spacing="3">
+                                    <TextBlock Text="DEPENDÊNCIAS (WINGET)" Classes="eyebrow" />
+                                    <ItemsControl ItemsSource="{Binding Dependencies}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <TextBlock Text="{Binding StringFormat='› {0}'}" Classes="dim" />
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </StackPanel>
                             </StackPanel>
-                        </DataTemplate>
-                    </ListBox.ItemTemplate>
-                </ListBox>
+                            <Border Grid.Column="1" Margin="16,0,0,0"
+                                    BorderBrush="{DynamicResource BorderBrightBrush}" BorderThickness="1"
+                                    CornerRadius="3" Padding="1">
+                                <Image Source="{Binding PreviewImage}" MaxWidth="260" MaxHeight="150" Stretch="Uniform" />
+                            </Border>
+                        </Grid>
+                    </Border>
 
-                <TextBlock Grid.Row="2" Margin="0,10,0,0"
-                           Text="{Binding StatusMessage}" TextWrapping="Wrap"/>
-            </Grid>
-        </TabItem>
+                    <StackPanel Grid.Row="2" Orientation="Horizontal" Spacing="8" Margin="0,16,0,0">
+                        <Button Content="INSTALAR TEMA" Classes="btn-primary" Command="{Binding InstallCommand}" />
+                        <Button Content="CANCELAR" Classes="btn-secondary" Command="{Binding CancelCommand}" />
+                        <ProgressBar IsIndeterminate="True" IsVisible="{Binding IsBusy}"
+                                     Width="180" Height="4" VerticalAlignment="Center" />
+                    </StackPanel>
 
-    </TabControl>
+                    <Border Grid.Row="3" Classes="console" Margin="0,16,0,0">
+                        <ScrollViewer>
+                            <ItemsControl ItemsSource="{Binding Log}" Margin="12">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding}" Classes="mono-log" TextWrapping="Wrap" />
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </ScrollViewer>
+                    </Border>
+                </Grid>
+            </TabItem>
+
+            <!-- ══ Tema ativo ═════════════════════════════════════════════ -->
+            <TabItem Header="TEMA ATIVO">
+                <Grid RowDefinitions="Auto,Auto,Auto,*" Margin="20,16" DataContext="{Binding Control}">
+
+                    <Border Grid.Row="0" Classes="card">
+                        <StackPanel Orientation="Horizontal" Spacing="16">
+                            <StackPanel Spacing="4" VerticalAlignment="Center">
+                                <TextBlock Text="TEMA APLICADO" Classes="eyebrow" />
+                                <TextBlock Text="{Binding ThemeTitle}" Classes="h2" TextWrapping="Wrap" />
+                            </StackPanel>
+                            <TextBlock Text="{Binding StateLabel}" Classes="dim" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </Border>
+
+                    <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="8" Margin="0,16,0,0">
+                        <Button Content="LIGAR TEMA" Classes="btn-primary" Command="{Binding TurnOnCommand}" />
+                        <Button Content="DESLIGAR TEMA" Classes="btn-secondary" Command="{Binding TurnOffCommand}" />
+                        <Button Content="PAUSAR/RETOMAR TILING" Classes="btn-secondary" Command="{Binding TogglePauseCommand}" />
+                        <Button Content="ATUALIZAR" Classes="btn-secondary" Command="{Binding RefreshCommand}" />
+                        <ProgressBar IsIndeterminate="True" IsVisible="{Binding IsBusy}"
+                                     Width="140" Height="4" VerticalAlignment="Center" />
+                    </StackPanel>
+
+                    <Border Grid.Row="2" Classes="card" Margin="0,16,0,0" IsVisible="{Binding HasActiveTheme}">
+                        <StackPanel Spacing="8">
+                            <TextBlock Text="DESINSTALAR ESTE TEMA" Classes="eyebrow" />
+                            <TextBlock Classes="muted" TextWrapping="Wrap"
+                                       Text="As configurações anteriores são restauradas do backup. As ferramentas abaixo só são removidas se você marcar — e apenas quando nenhum outro tema instalado depende delas." />
+                            <ItemsControl ItemsSource="{Binding RemovableTools}" Margin="0,2,0,0">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <CheckBox IsChecked="{Binding RemoveIt}"
+                                                  IsEnabled="{Binding CanRemove}"
+                                                  Content="{Binding Description}" />
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                            <Button Content="DESINSTALAR TEMA" Classes="btn-gold"
+                                    HorizontalAlignment="Left" Command="{Binding UninstallCommand}" />
+                        </StackPanel>
+                    </Border>
+
+                    <Border Grid.Row="3" Classes="console" Margin="0,16,0,0">
+                        <ScrollViewer>
+                            <ItemsControl ItemsSource="{Binding Log}" Margin="12">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding}" Classes="mono-log" TextWrapping="Wrap" />
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </ScrollViewer>
+                    </Border>
+                </Grid>
+            </TabItem>
+
+            <!-- ══ Backups ════════════════════════════════════════════════ -->
+            <TabItem Header="BACKUPS">
+                <Grid RowDefinitions="Auto,*" Margin="20,16" DataContext="{Binding Backups}">
+                    <StackPanel Grid.Row="0" Spacing="8">
+                        <TextBlock Text="SESSÕES DE BACKUP" Classes="eyebrow" />
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <Button Content="ATUALIZAR" Classes="btn-secondary" Command="{Binding RefreshCommand}" />
+                            <Button Content="RESTAURAR SELECIONADO" Classes="btn-primary" Command="{Binding RestoreCommand}" />
+                        </StackPanel>
+                    </StackPanel>
+
+                    <Border Grid.Row="1" Classes="console" Margin="0,16,0,0">
+                        <ListBox ItemsSource="{Binding Sessions}"
+                                 SelectedItem="{Binding SelectedSession}"
+                                 Background="Transparent" Margin="6">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate x:DataType="backup:BackupSessionInfo">
+                                    <StackPanel Orientation="Horizontal" Spacing="16">
+                                        <TextBlock Text="{Binding CreatedAt, StringFormat='{}{0:dd/MM/yyyy HH:mm}'}" Classes="dim" />
+                                        <TextBlock Text="{Binding ThemeId}" FontWeight="Bold" FontSize="12" />
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                    </Border>
+                </Grid>
+            </TabItem>
+        </TabControl>
+
+        <!-- ── Barra de status ───────────────────────────────────────────── -->
+        <Border Grid.Row="2"
+                Background="{DynamicResource BgPrimaryBrush}"
+                BorderBrush="{DynamicResource BorderBrush2}" BorderThickness="0,1,0,0">
+            <TextBlock Text="{Binding StatusMessage}" Classes="muted" VerticalAlignment="Center" Margin="12,0" />
+        </Border>
+    </Grid>
 </Window>

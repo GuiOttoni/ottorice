@@ -1,0 +1,111 @@
+name: CI
+
+# Workflow unico: valida build e testes em PRs e pushes, e faz release automatico
+# (tag + instalador + GitHub Release) apenas quando algo chega na main.
+# Nao existe um workflow separado disparado por push de tag: isso evitaria
+# duplicar o build (a tag criada aqui já é o artefato final, nao um gatilho
+# para outro workflow rebuildar tudo de novo).
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    name: Build & Test
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Restore dependencies
+        run: dotnet restore
+
+      - name: Build (Debug)
+        run: dotnet build --configuration Debug --no-restore
+
+      - name: Test
+        run: dotnet test --configuration Debug --no-build --verbosity normal
+
+  auto-release:
+    name: Auto Release (patch bump)
+    runs-on: windows-latest
+    needs: build
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Setup Inno Setup
+        run: choco install innosetup -y --no-progress
+
+      - name: Bump patch version
+        id: version
+        shell: bash
+        run: |
+          git fetch --tags
+
+          latest=$(git tag --list 'v*.*.*' --sort=-version:refname | head -1)
+          if [ -z "$latest" ]; then
+            latest="v0.1.0"
+          fi
+
+          major=$(echo "$latest" | sed 's/v//' | cut -d. -f1)
+          minor=$(echo "$latest" | cut -d. -f2)
+          patch=$(echo "$latest" | cut -d. -f3)
+          new_patch=$((patch + 1))
+          new_tag="v${major}.${minor}.${new_patch}"
+          version="${major}.${minor}.${new_patch}"
+
+          echo "TAG=$new_tag" >> "$GITHUB_OUTPUT"
+          echo "VERSION=$version" >> "$GITHUB_OUTPUT"
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag "$new_tag"
+          git push origin "$new_tag"
+
+      - name: Publish application
+        run: >
+          dotnet publish src/OttoRice/OttoRice.csproj
+          --configuration Release
+          --runtime win-x64
+          --self-contained true
+          -p:PublishSingleFile=true
+          -p:IncludeNativeLibrariesForSelfExtract=true
+          -p:Version=${{ steps.version.outputs.VERSION }}
+          --output ./publish/win-x64
+
+      - name: Build installer (Inno Setup)
+        shell: powershell
+        run: |
+          $iscc = "C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
+          & $iscc "installer\OttoRice.iss" `
+            "/DAppVersion=${{ steps.version.outputs.VERSION }}" `
+            "/DPublishDir=..\publish\win-x64"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.TAG }}
+          files: dist/*.exe
+          generate_release_notes: true
+          draft: false
+          prerelease: false

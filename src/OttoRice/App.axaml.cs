@@ -29,7 +29,7 @@ public partial class App : Application
 
     public override void OnFrameworkInitializationCompleted()
     {
-        ConfigureLogging();
+        // O logger é configurado em Program.Main, antes da Avalonia subir.
         Services = ConfigureServices();
 
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
@@ -41,21 +41,6 @@ public partial class App : Application
         }
 
         base.OnFrameworkInitializationCompleted();
-    }
-
-    private static void ConfigureLogging()
-    {
-        var logDir = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "OttoRice", "logs");
-
-        Log.Logger = new LoggerConfiguration()
-            .MinimumLevel.Debug()
-            .WriteTo.Debug()
-            .WriteTo.File(Path.Combine(logDir, "ottorice-.log"), rollingInterval: RollingInterval.Day)
-            .CreateLogger();
-
-        Log.Information("OttoRice iniciado");
     }
 
     private static ServiceProvider ConfigureServices()
