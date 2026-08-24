@@ -5,6 +5,13 @@ Réplica, dentro do que o formato de manifesto do OttoRice permite, das features
 Windows Terminal, VS Code, Zed, Fastfetch, Flow Launcher e Oh My Posh, todos na paleta
 [Catppuccin Mocha](https://catppuccin.com/palette) oficial.
 
+> ⚠️ **Este tema não restiliza a taskbar/menu Iniciar/central de notificações nativos
+> por si só** — só oculta a taskbar (ver `TaskbarService`, item já coberto pelo OttoRice).
+> Pra esse reskin extra (o que o windots usa Windhawk pra fazer), baixe e instale o
+> **[Windhawk](https://windhawk.net/)** manualmente — não vem pelo OttoRice, é instalado
+> à parte — e ative por lá os mods *Taskbar Styler*, *Start Menu Styler* e *Notification
+> Center Styler*. Detalhes em "Windhawk — por que não dá pra automatizar" abaixo.
+
 ## Conteúdo
 
 ```
@@ -32,7 +39,7 @@ assets/wallpaper.png, assets/preview.png     gerados nesta sessão (gradiente + 
 | ⚙️ Fastfetch                                        | ✅ `fastfetch` — módulos básicos |
 | 🚀 Flow Launcher                                    | ✅ `flow_launcher` — hotkey/idioma; **não** inclui um tema Catppuccin específico (ver nota) |
 | 🐚 PowerShell config                                | ❌ Fora de escopo por design — ver nota |
-| 🦅 Taskbar/Start menu/Notification center (Windhawk) | ❌ Não integrável — ver nota |
+| 🦅 Taskbar/Start menu/Notification center (Windhawk) | ⚠️ **Baixe à parte**: [windhawk.net](https://windhawk.net/) — ver aviso no topo e nota abaixo |
 | 💫 Wallpapers                                       | ✅ `wallpaper` — gerado nesta sessão (gradiente + glow mauve/blue/pink) |
 | 🐈 Catppuccin everywhere                            | ✅ é a paleta de todo o tema, não um target próprio |
 
@@ -62,9 +69,10 @@ Mocha que já vem embutido na instalação —
 Windhawk (usado pelo windots pros mods *Taskbar Styler*, *Start Menu Styler* e
 *Notification Center Styler*) é configurado pela própria interface do Windhawk — os mods
 são habilitados/ajustados por lá, não por um arquivo de config que o
-`FileOverrideApplier` possa copiar. Fora do escopo do OttoRice hoje. Quem quiser essa
-camada extra de reskin nativo instala o Windhawk manualmente e ativa os mods pela
-interface dele — funciona em paralelo ao GlazeWM/YASB deste tema sem conflito.
+`FileOverrideApplier` possa copiar. Fora do escopo do OttoRice hoje: o manifesto deste
+tema **não instala nem configura o Windhawk**. Baixe manualmente em
+**https://windhawk.net/** e ative os mods pela interface dele — funciona em paralelo ao
+GlazeWM/YASB deste tema sem conflito.
 
 ### Flow Launcher — por que não tem um tema Catppuccin pronto
 
