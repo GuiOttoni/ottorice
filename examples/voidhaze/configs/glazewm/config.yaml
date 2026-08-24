@@ -7,6 +7,15 @@ general:
   focus_follows_cursor: false
   toggle_workspace_on_refocus: false
 
+# Sem isso, o GlazeWM tenta blocar (tiling) a janela da barra YASB como se fosse uma
+# janela normal — no multi-monitor isso a estica pra ocupar o monitor inteiro em vez de
+# ficar como uma barra fina no topo. `ignore` mantém a janela fora do tiling.
+window_rules:
+  - commands: ['ignore']
+    match_process_name: 'yasb'
+  - commands: ['ignore']
+    match_process_name: 'zebar'
+
 gaps:
   scale_with_dpi: true
   inner_gap: '8px'
