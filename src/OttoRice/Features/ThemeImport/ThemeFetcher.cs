@@ -5,6 +5,7 @@ using System.Linq;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 using OttoRice.Common;
 using OttoRice.Features.ThemeImport.Models;
 
@@ -61,7 +62,8 @@ public interface IThemeFetcher
 /// para o cache local e valida o rice-manifest.json. Um único request cobre sources de
 /// arquivo e de pasta.
 /// </summary>
-public sealed class ThemeFetcher(HttpClient http, string? cacheRootOverride = null) : IThemeFetcher
+public sealed class ThemeFetcher(
+    HttpClient http, string? cacheRootOverride = null, ILogger<ThemeFetcher>? logger = null) : IThemeFetcher
 {
     public const string ManifestFileName = "rice-manifest.json";
     private const long MaxDownloadBytes = 50 * 1024 * 1024; // RNF-01
@@ -98,8 +100,13 @@ public sealed class ThemeFetcher(HttpClient http, string? cacheRootOverride = nu
                 break;
         }
         if (zipPath is null)
+        {
+            logger?.LogWarning(
+                "Não foi possível baixar {Owner}/{Repo} (branches tentadas: {Branches}).",
+                repoRef.Owner, repoRef.Repo, string.Join(", ", branches));
             return Result<FetchedTheme>.Fail(
                 $"Não foi possível baixar {repoRef.Owner}/{repoRef.Repo} (branches tentadas: {string.Join(", ", branches)}).");
+        }
 
         try
         {
@@ -121,10 +128,13 @@ public sealed class ThemeFetcher(HttpClient http, string? cacheRootOverride = nu
                 return Result<FetchedTheme>.Fail(
                     $"'{ManifestFileName}' não encontrado em {(repoRef.SubPath.Length > 0 ? repoRef.SubPath : "na raiz do repo")}.");
 
-            var manifest = ManifestValidator.Parse(await File.ReadAllTextAsync(manifestPath, ct));
+            var manifest = ManifestValidator.Parse(await File.ReadAllTextAsync(manifestPath, ct), logger);
             if (!manifest.IsSuccess)
                 return Result<FetchedTheme>.Fail(manifest.Error!);
 
+            logger?.LogInformation(
+                "Tema '{ThemeId}' baixado de {Owner}/{Repo} para '{ThemeDir}'.",
+                manifest.Value!.ThemeId, repoRef.Owner, repoRef.Repo, themeDir);
             return Result<FetchedTheme>.Ok(new FetchedTheme(themeDir, manifest.Value!));
         }
         finally
@@ -142,7 +152,7 @@ public sealed class ThemeFetcher(HttpClient http, string? cacheRootOverride = nu
         if (!manifestPath.EndsWith(".json", StringComparison.OrdinalIgnoreCase))
             return Result<FetchedTheme>.Fail("Um arquivo de tema local precisa ser um manifesto .json.");
 
-        var manifest = ManifestValidator.Parse(await File.ReadAllTextAsync(manifestPath, ct));
+        var manifest = ManifestValidator.Parse(await File.ReadAllTextAsync(manifestPath, ct), logger);
         if (!manifest.IsSuccess)
             return Result<FetchedTheme>.Fail(manifest.Error!);
 
@@ -158,7 +168,7 @@ public sealed class ThemeFetcher(HttpClient http, string? cacheRootOverride = nu
         if (!File.Exists(manifestPath))
             return Result<FetchedTheme>.Fail($"'{ManifestFileName}' não encontrado em {themeDir}.");
 
-        var manifest = ManifestValidator.Parse(await File.ReadAllTextAsync(manifestPath, ct));
+        var manifest = ManifestValidator.Parse(await File.ReadAllTextAsync(manifestPath, ct), logger);
         return manifest.IsSuccess
             ? Result<FetchedTheme>.Ok(new FetchedTheme(Path.GetFullPath(themeDir), manifest.Value!))
             : Result<FetchedTheme>.Fail(manifest.Error!);

@@ -75,6 +75,7 @@ public class EndToEndInstallTests : IDisposable
     {
         var planner = new TargetPlanner(
             new WindowsTerminalLocator(Path.Combine(_sandbox, "localappdata")),
+            Substitute.For<IExecutableResolver>(),
             path => path.Replace("%USERPROFILE%", _fakeUserProfile));
 
         IInstallStep[] steps =

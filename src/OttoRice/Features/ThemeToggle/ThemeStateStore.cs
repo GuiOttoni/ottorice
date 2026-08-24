@@ -4,6 +4,7 @@ using System.IO;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 using OttoRice.Common;
 
 namespace OttoRice.Features.ThemeToggle;
@@ -33,7 +34,7 @@ public sealed record ThemeState
     public bool HasActiveTheme => ActiveThemeId is not null;
 }
 
-public sealed class ThemeStateStore(string? rootOverride = null)
+public sealed class ThemeStateStore(string? rootOverride = null, ILogger<ThemeStateStore>? logger = null)
 {
     private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true };
 
@@ -52,8 +53,9 @@ public sealed class ThemeStateStore(string? rootOverride = null)
             return JsonSerializer.Deserialize<ThemeState>(await File.ReadAllTextAsync(StatePath, ct))
                    ?? ThemeState.Empty;
         }
-        catch (JsonException)
+        catch (JsonException ex)
         {
+            logger?.LogWarning(ex, "state.json corrompido em '{StatePath}' — descartando e assumindo estado vazio.", StatePath);
             return ThemeState.Empty;
         }
     }

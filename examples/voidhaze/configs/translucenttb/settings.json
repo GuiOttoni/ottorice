@@ -1,0 +1,21 @@
+{
+  "desktop_appearance": {
+    "accent": "acrylic",
+    "color": "#3C145AAA"
+  },
+  "visible_window_appearance": {
+    "accent": "acrylic",
+    "color": "#3C145AAA"
+  },
+  "maximized_window_appearance": {
+    "accent": "opaque",
+    "color": "#0B0714FF"
+  },
+  "start_opened_appearance": {
+    "enabled": true,
+    "accent": "blur",
+    "color": "#22D3EE33"
+  },
+  "hide_tray": false,
+  "disable_saving": false
+}

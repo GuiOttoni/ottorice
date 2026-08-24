@@ -1,6 +1,7 @@
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 
 namespace OttoRice.Common;
 
@@ -10,7 +11,8 @@ namespace OttoRice.Common;
 /// </summary>
 public static class AtomicFileWriter
 {
-    public static async Task WriteAllTextAsync(string targetPath, string content, CancellationToken ct = default)
+    public static async Task WriteAllTextAsync(
+        string targetPath, string content, CancellationToken ct = default, ILogger? logger = null)
     {
         var directory = Path.GetDirectoryName(Path.GetFullPath(targetPath));
         if (!string.IsNullOrEmpty(directory))
@@ -19,9 +21,11 @@ public static class AtomicFileWriter
         var tempPath = targetPath + ".tmp";
         await File.WriteAllTextAsync(tempPath, content, ct);
         File.Move(tempPath, targetPath, overwrite: true);
+        logger?.LogDebug("Escrita atômica concluída em '{TargetPath}'.", targetPath);
     }
 
-    public static async Task CopyAsync(string sourcePath, string targetPath, CancellationToken ct = default)
+    public static async Task CopyAsync(
+        string sourcePath, string targetPath, CancellationToken ct = default, ILogger? logger = null)
     {
         var directory = Path.GetDirectoryName(Path.GetFullPath(targetPath));
         if (!string.IsNullOrEmpty(directory))
@@ -34,5 +38,6 @@ public static class AtomicFileWriter
             await source.CopyToAsync(destination, ct);
         }
         File.Move(tempPath, targetPath, overwrite: true);
+        logger?.LogDebug("Cópia atômica de '{SourcePath}' para '{TargetPath}' concluída.", sourcePath, targetPath);
     }
 }

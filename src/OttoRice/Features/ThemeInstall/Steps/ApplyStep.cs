@@ -1,6 +1,7 @@
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 using OttoRice.AppRegistry.Appliers;
 using OttoRice.Common;
 
@@ -13,7 +14,8 @@ namespace OttoRice.Features.ThemeInstall.Steps;
 public sealed class ApplyStep(
     FileOverrideApplier overrideApplier,
     WindowsTerminalApplier terminalApplier,
-    IWallpaperService wallpaper) : IInstallStep
+    IWallpaperService wallpaper,
+    ILogger<ApplyStep>? logger = null) : IInstallStep
 {
     public string Name => "Aplicação";
 
@@ -42,6 +44,9 @@ public sealed class ApplyStep(
             }
         }
 
+        logger?.LogInformation(
+            "Aplicação concluída: {Count} operação(ões) para o tema {ThemeId}.",
+            context.Operations.Count, context.Manifest.ThemeId);
         return Result.Ok();
     }
 }

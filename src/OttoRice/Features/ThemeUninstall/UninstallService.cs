@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 using OttoRice.Common;
 using OttoRice.Features.BackupRestore;
 using OttoRice.Features.ThemeToggle;
@@ -26,7 +27,8 @@ public sealed class UninstallService(
     BackupSessionStore backups,
     ThemeStateStore stateStore,
     ThemeToggleService toggle,
-    IWinGetClient winGet)
+    IWinGetClient winGet,
+    ILogger<UninstallService>? logger = null)
 {
     /// <summary>Quais ferramentas do tema poderiam ser desinstaladas, e quantos temas ainda as usam.</summary>
     public async Task<IReadOnlyList<RemovableTool>> GetRemovableToolsAsync(
@@ -97,6 +99,7 @@ public sealed class UninstallService(
         if (state.ActiveThemeId == themeId)
             await stateStore.ClearAsync(ct);
 
+        logger?.LogInformation("Tema '{ThemeId}' ({ThemeName}) desinstalado.", themeId, record.ThemeName);
         progress?.Invoke($"Tema '{record.ThemeName}' removido.");
         return Result.Ok();
     }

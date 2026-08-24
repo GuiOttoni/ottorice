@@ -2,6 +2,7 @@ using System;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 
 namespace OttoRice.Common;
 
@@ -17,7 +18,7 @@ public interface IWinGetClient
 /// Wrapper do WinGet CLI. Instalações devem ser chamadas em série — o WinGet
 /// não suporta operações concorrentes (lock no banco local).
 /// </summary>
-public sealed partial class WinGetClient(IProcessRunner runner) : IWinGetClient
+public sealed partial class WinGetClient(IProcessRunner runner, ILogger<WinGetClient>? logger = null) : IWinGetClient
 {
     // APPINSTALLER_CLI_ERROR_PACKAGE_ALREADY_INSTALLED (0x8A15002B)
     private const int AlreadyInstalled = unchecked((int)0x8A15002B);
@@ -60,6 +61,9 @@ public sealed partial class WinGetClient(IProcessRunner runner) : IWinGetClient
         if (result.ExitCode == 0 || result.ExitCode == AlreadyInstalled)
             return Result.Ok();
 
+        logger?.LogError(
+            "WinGet falhou ao instalar '{PackageId}' (exit 0x{ExitCode:X8}). {StdErr}",
+            packageId, result.ExitCode, result.StandardError);
         return Result.Fail(
             $"WinGet falhou ao instalar '{packageId}' (exit 0x{result.ExitCode:X8}). {Truncate(result.StandardError, 300)}");
     }
@@ -76,6 +80,9 @@ public sealed partial class WinGetClient(IProcessRunner runner) : IWinGetClient
         if (result.ExitCode == 0 || result.ExitCode == NoPackageFound)
             return Result.Ok();
 
+        logger?.LogError(
+            "WinGet falhou ao desinstalar '{PackageId}' (exit 0x{ExitCode:X8}). {StdErr}",
+            packageId, result.ExitCode, result.StandardError);
         return Result.Fail(
             $"WinGet falhou ao desinstalar '{packageId}' (exit 0x{result.ExitCode:X8}). {Truncate(result.StandardError, 300)}");
     }

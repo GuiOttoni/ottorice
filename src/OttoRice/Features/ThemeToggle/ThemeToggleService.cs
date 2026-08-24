@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 using OttoRice.Common;
 
 namespace OttoRice.Features.ThemeToggle;
@@ -24,11 +25,12 @@ public sealed class ThemeToggleService(
     IProcessRunner runner,
     IWallpaperService wallpaper,
     ThemeStateStore stateStore,
-    IExecutableResolver resolver)
+    IExecutableResolver resolver,
+    ILogger<ThemeToggleService>? logger = null)
 {
     /// <summary>Únicos processos que este serviço pode encerrar por PID.</summary>
     private static readonly HashSet<string> KillableProcesses =
-        new(StringComparer.OrdinalIgnoreCase) { "zebar", "yasb" };
+        new(StringComparer.OrdinalIgnoreCase) { "zebar", "yasb", "TranslucentTB" };
 
     public Task<ThemeState> GetStateAsync(CancellationToken ct = default) => stateStore.ReadAsync(ct);
 
@@ -70,9 +72,16 @@ public sealed class ThemeToggleService(
             await TryRunAsync("yasbc", "disable-autostart", ct);
         }
 
+        if (state.ManagedApps.Contains("translucenttb"))
+        {
+            progress?.Invoke("Parando o TranslucentTB (best-effort)...");
+            KillIfRunning("TranslucentTB", progress);
+        }
+
         RestoreOriginalWallpaper(state, progress);
 
         await stateStore.WriteAsync(state with { IsEnabled = false }, ct);
+        logger?.LogInformation("Tema {ThemeId} desligado.", state.ActiveThemeId);
         return Result.Ok();
     }
 
@@ -118,7 +127,22 @@ public sealed class ThemeToggleService(
             }
         }
 
+        if (state.ManagedApps.Contains("translucenttb"))
+        {
+            var translucentTb = resolver.Resolve("TranslucentTB");
+            if (translucentTb is not null)
+            {
+                progress?.Invoke("Iniciando o TranslucentTB...");
+                runner.StartDetached(translucentTb, string.Empty);
+            }
+            else
+            {
+                progress?.Invoke("⚠ TranslucentTB não encontrado — taskbar não restilizada.");
+            }
+        }
+
         await stateStore.WriteAsync(state with { IsEnabled = true }, ct);
+        logger?.LogInformation("Tema {ThemeId} ligado.", state.ActiveThemeId);
         return Result.Ok();
     }
 
@@ -141,6 +165,7 @@ public sealed class ThemeToggleService(
         }
         catch (Exception ex)
         {
+            logger?.LogWarning(ex, "Não foi possível restaurar o papel de parede anterior.");
             progress?.Invoke($"⚠ Não foi possível restaurar o papel de parede: {ex.Message}");
         }
     }
@@ -153,7 +178,8 @@ public sealed class ThemeToggleService(
         foreach (var pid in runner.FindProcessIds(processName))
         {
             progress?.Invoke($"Encerrando {processName} (pid {pid})...");
-            runner.TryKill(pid);
+            if (!runner.TryKill(pid))
+                logger?.LogWarning("Falha ao encerrar {ProcessName} (pid {Pid}).", processName, pid);
         }
     }
 
@@ -163,12 +189,17 @@ public sealed class ThemeToggleService(
         {
             var exePath = resolver.Resolve(fileName) ?? fileName;
             var result = await runner.RunAsync(exePath, arguments, ct);
+            if (result.ExitCode != 0)
+                logger?.LogWarning(
+                    "'{FileName} {Arguments}' saiu com código {ExitCode}: {StdErr}",
+                    fileName, arguments, result.ExitCode, result.StandardError);
             return result.ExitCode == 0
                 ? Result.Ok()
                 : Result.Fail($"'{fileName} {arguments}' saiu com código {result.ExitCode}.");
         }
         catch (Exception ex)
         {
+            logger?.LogWarning(ex, "'{FileName}' não encontrado no PATH.", fileName);
             return Result.Fail($"'{fileName}' não encontrado no PATH: {ex.Message}");
         }
     }

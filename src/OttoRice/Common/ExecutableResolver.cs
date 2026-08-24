@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using Microsoft.Extensions.Logging;
 using Microsoft.Win32;
 
 namespace OttoRice.Common;
@@ -37,11 +38,14 @@ public sealed class ExecutableResolver : IExecutableResolver
 
     private readonly Func<string, string> _expand;
     private readonly Func<bool> _isWindows;
+    private readonly ILogger<ExecutableResolver>? _logger;
 
-    public ExecutableResolver(Func<string, string>? expand = null, Func<bool>? isWindows = null)
+    public ExecutableResolver(
+        Func<string, string>? expand = null, Func<bool>? isWindows = null, ILogger<ExecutableResolver>? logger = null)
     {
         _expand = expand ?? Environment.ExpandEnvironmentVariables;
         _isWindows = isWindows ?? (() => OperatingSystem.IsWindows());
+        _logger = logger;
     }
 
     public string? Resolve(string exeName)
@@ -66,6 +70,7 @@ public sealed class ExecutableResolver : IExecutableResolver
             }
         }
 
+        _logger?.LogWarning("'{ExeName}' não encontrado (PATH, registro nem locais conhecidos).", exeName);
         return null;
     }
 
@@ -111,6 +116,7 @@ public sealed class ExecutableResolver : IExecutableResolver
         catch (Exception ex) when (ex is System.Security.SecurityException or UnauthorizedAccessException)
         {
             // Sem acesso ao registro: seguimos com os locais conhecidos.
+            _logger?.LogDebug(ex, "Sem acesso ao registro para reler o PATH — seguindo com locais conhecidos.");
         }
         return values;
     }

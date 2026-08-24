@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Text;
+using Microsoft.Extensions.Logging;
 
 namespace OttoRice.Common;
 
@@ -13,7 +14,7 @@ public interface IWallpaperService
     void Set(string imagePath);
 }
 
-public sealed partial class WindowsWallpaperService : IWallpaperService
+public sealed partial class WindowsWallpaperService(ILogger<WindowsWallpaperService>? logger = null) : IWallpaperService
 {
     private const uint SpiGetDeskWallpaper = 0x0073;
     private const uint SpiSetDeskWallpaper = 0x0014;
@@ -45,7 +46,11 @@ public sealed partial class WindowsWallpaperService : IWallpaperService
             throw new FileNotFoundException($"Imagem de wallpaper não encontrada: {fullPath}");
 
         if (!SystemParametersInfo(SpiSetDeskWallpaper, 0, fullPath, SpifUpdateIniFile | SpifSendChange))
+        {
+            var error = Marshal.GetLastPInvokeError();
+            logger?.LogError("SystemParametersInfo falhou ao definir o wallpaper '{Path}' (erro {Error}).", fullPath, error);
             throw new InvalidOperationException(
-                $"SystemParametersInfo falhou ao definir o wallpaper (erro {Marshal.GetLastPInvokeError()}).");
+                $"SystemParametersInfo falhou ao definir o wallpaper (erro {error}).");
+        }
     }
 }

@@ -10,6 +10,7 @@ public enum ReloadAction
     Yasb,
     Zebar,
     Wallpaper,
+    TranslucentTb,
 }
 
 public sealed record AppDefinition(
@@ -18,7 +19,14 @@ public sealed record AppDefinition(
     IReadOnlyList<string> ConfigPaths,
     IReadOnlySet<string> AllowedActions,
     ReloadAction Reload,
-    string? ConfigRoot = null);
+    string? ConfigRoot = null,
+    /// <summary>
+    /// Quando definido, o TargetPlanner resolve o diretório de config dinamicamente pela
+    /// pasta do executável real (seguindo symlink), em vez de usar <see cref="ConfigRoot"/>
+    /// estático. Necessário para apps instalados via winget portable, cujo caminho real
+    /// só é conhecido em runtime (ex.: TranslucentTB).
+    /// </summary>
+    string? ExecutableName = null);
 
 /// <summary>
 /// Registry dos apps suportados: é a whitelist de segurança do OttoRice.
@@ -63,6 +71,16 @@ public static class SupportedApps
                 [],
                 new HashSet<string> { "set" },
                 ReloadAction.Wallpaper),
+
+            // Restiliza a taskbar nativa (não a esconde) — accent/cor via settings.json.
+            // Instalado via winget portable: o exe no PATH é um symlink, a config real
+            // fica ao lado do exe de verdade (ver TargetPlanner.ResolveConfigRootFromExecutable).
+            ["translucenttb"] = new(
+                "translucenttb", "TranslucentTB",
+                ["settings.json"],
+                new HashSet<string> { "override" },
+                ReloadAction.TranslucentTb,
+                ExecutableName: "TranslucentTB"),
         };
 
     public static bool IsSupported(string appId) => All.ContainsKey(appId);

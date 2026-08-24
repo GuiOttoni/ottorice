@@ -5,6 +5,15 @@ namespace OttoRice.Tests;
 public class ExecutableResolverTests : IDisposable
 {
     private readonly string _dir = Directory.CreateTempSubdirectory("ottorice-resolver").FullName;
+    private readonly string? _previousPath = Environment.GetEnvironmentVariable("PATH");
+
+    public ExecutableResolverTests()
+    {
+        // Isola do PATH real da máquina de dev: sem isso, ferramentas realmente
+        // instaladas (ex.: GlazeWM/YASB de um dogfooding anterior) mascaram os cenários
+        // "não está no PATH" que estes testes existem para cobrir.
+        Environment.SetEnvironmentVariable("PATH", "");
+    }
 
     private string CreateExe(string subDir, string name)
     {
@@ -90,5 +99,9 @@ public class ExecutableResolverTests : IDisposable
         }
     }
 
-    public void Dispose() => Directory.Delete(_dir, recursive: true);
+    public void Dispose()
+    {
+        Environment.SetEnvironmentVariable("PATH", _previousPath);
+        Directory.Delete(_dir, recursive: true);
+    }
 }

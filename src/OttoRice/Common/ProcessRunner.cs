@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 
 namespace OttoRice.Common;
 
@@ -23,7 +24,7 @@ public interface IProcessRunner
     bool TryKill(int processId);
 }
 
-public sealed class ProcessRunner : IProcessRunner
+public sealed class ProcessRunner(ILogger<ProcessRunner>? logger = null) : IProcessRunner
 {
     public async Task<ProcessResult> RunAsync(string fileName, string arguments, CancellationToken ct = default)
     {
@@ -56,6 +57,7 @@ public sealed class ProcessRunner : IProcessRunner
             UseShellExecute = false,
             CreateNoWindow = true,
         });
+        logger?.LogInformation("Processo iniciado (detached): '{FileName} {Arguments}'.", fileName, arguments);
     }
 
     public IReadOnlyList<int> FindProcessIds(string processName)
@@ -64,8 +66,9 @@ public sealed class ProcessRunner : IProcessRunner
         {
             return [.. Process.GetProcessesByName(processName).Select(p => p.Id)];
         }
-        catch (System.Exception)
+        catch (System.Exception ex)
         {
+            logger?.LogWarning(ex, "Falha ao listar processos com nome '{ProcessName}'.", processName);
             return [];
         }
     }
@@ -78,8 +81,9 @@ public sealed class ProcessRunner : IProcessRunner
             process.Kill();
             return process.WaitForExit(5000);
         }
-        catch (System.Exception)
+        catch (System.Exception ex)
         {
+            logger?.LogWarning(ex, "Falha ao encerrar o processo pid {ProcessId}.", processId);
             return false;
         }
     }

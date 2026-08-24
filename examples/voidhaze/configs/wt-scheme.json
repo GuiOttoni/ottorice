@@ -1,0 +1,23 @@
+{
+  "name": "Voidhaze",
+  "background": "#0B0714",
+  "foreground": "#D6C9F0",
+  "cursorColor": "#22D3EE",
+  "selectionBackground": "#3C145A",
+  "black": "#0B0714",
+  "red": "#E0567A",
+  "green": "#4CE0A0",
+  "yellow": "#E0C840",
+  "blue": "#7C6AE0",
+  "purple": "#A78BFA",
+  "cyan": "#22D3EE",
+  "white": "#D6C9F0",
+  "brightBlack": "#3C145A",
+  "brightRed": "#FF7A9C",
+  "brightGreen": "#6FFFC0",
+  "brightYellow": "#FFE45F",
+  "brightBlue": "#9C8CFF",
+  "brightPurple": "#C4A8FF",
+  "brightCyan": "#5FF5FF",
+  "brightWhite": "#FFFFFF"
+}

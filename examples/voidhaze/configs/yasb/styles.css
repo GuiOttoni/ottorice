@@ -1,0 +1,48 @@
+/* Voidhaze — YASB Reborn (%USERPROFILE%\.config\yasb\styles.css)
+   Paleta: fundo violeta-quase-preto (#0B0714), destaque ciano (#22D3EE),
+   haze magenta (#3C145A). */
+
+.yasb-bar {
+    background-color: rgba(11, 7, 20, 0.92);
+    font-family: "Segoe UI", sans-serif;
+    font-size: 13px;
+    color: #D6C9F0;
+}
+
+.widget {
+    padding: 0 8px;
+}
+
+.widget .label {
+    color: #D6C9F0;
+    padding: 0 4px;
+}
+
+.glazewm-workspaces .ws-btn {
+    color: #7C6A9C;
+    padding: 0 6px;
+}
+
+.glazewm-workspaces .ws-btn.active {
+    color: #22D3EE;
+    font-weight: 600;
+}
+
+.active-window .label {
+    color: #A78BFA;
+}
+
+.clock .label {
+    color: #22D3EE;
+    font-weight: 600;
+}
+
+.cpu .label,
+.memory .label {
+    color: #D6C9F0;
+}
+
+.cpu .icon,
+.memory .icon {
+    color: #3C145A;
+}

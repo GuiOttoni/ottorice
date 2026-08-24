@@ -4,6 +4,7 @@ using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using OttoRice.AppRegistry.Appliers;
 using OttoRice.AppRegistry.Reloaders;
 using OttoRice.Common;
@@ -47,8 +48,13 @@ public partial class App : Application
     {
         var services = new ServiceCollection();
 
+        // Ponte pro Serilog já configurado em Program.Main: os serviços recebem
+        // ILogger<T> por DI em vez de usar Serilog.Log estático.
+        services.AddLogging(b => b.AddSerilog(dispose: false));
+
         services.AddSingleton<IProcessRunner, ProcessRunner>();
-        services.AddSingleton<IExecutableResolver>(_ => new ExecutableResolver());
+        services.AddSingleton<IExecutableResolver>(
+            sp => new ExecutableResolver(logger: sp.GetService<ILogger<ExecutableResolver>>()));
         services.AddSingleton<IWinGetClient, WinGetClient>();
         services.AddSingleton<IWallpaperService, WindowsWallpaperService>();
         services.AddSingleton<IAppReloader, AppReloader>();
@@ -65,9 +71,11 @@ public partial class App : Application
             http.DefaultRequestHeaders.UserAgent.ParseAdd("OttoRice/0.1");
             return http;
         });
-        services.AddSingleton<IThemeFetcher>(sp => new ThemeFetcher(sp.GetRequiredService<HttpClient>()));
-        services.AddSingleton<IThemeFilePicker>(_ =>
-            new AvaloniaThemeFilePicker(AvaloniaThemeFilePicker.CurrentMainWindow));
+        services.AddSingleton<IThemeFetcher>(sp => new ThemeFetcher(
+            sp.GetRequiredService<HttpClient>(), logger: sp.GetService<ILogger<ThemeFetcher>>()));
+        services.AddSingleton<IThemeFilePicker>(sp =>
+            new AvaloniaThemeFilePicker(
+                AvaloniaThemeFilePicker.CurrentMainWindow, sp.GetService<ILogger<AvaloniaThemeFilePicker>>()));
 
         services.AddSingleton<ThemeStateStore>();
         services.AddSingleton<ThemeToggleService>();
@@ -80,15 +88,19 @@ public partial class App : Application
 
         services.AddTransient<InstallPipeline>(sp => new InstallPipeline(
         [
-            new PlanStep(sp.GetRequiredService<TargetPlanner>()),
-            new DependencyStep(sp.GetRequiredService<IWinGetClient>()),
-            new BackupStep(sp.GetRequiredService<BackupSessionStore>(), sp.GetRequiredService<IWallpaperService>()),
+            new PlanStep(sp.GetRequiredService<TargetPlanner>(), sp.GetService<ILogger<PlanStep>>()),
+            new DependencyStep(sp.GetRequiredService<IWinGetClient>(), sp.GetService<ILogger<DependencyStep>>()),
+            new BackupStep(
+                sp.GetRequiredService<BackupSessionStore>(),
+                sp.GetRequiredService<IWallpaperService>(),
+                sp.GetService<ILogger<BackupStep>>()),
             new ApplyStep(
                 sp.GetRequiredService<FileOverrideApplier>(),
                 sp.GetRequiredService<WindowsTerminalApplier>(),
-                sp.GetRequiredService<IWallpaperService>()),
-            new ReloadStep(sp.GetRequiredService<IAppReloader>()),
-        ]));
+                sp.GetRequiredService<IWallpaperService>(),
+                sp.GetService<ILogger<ApplyStep>>()),
+            new ReloadStep(sp.GetRequiredService<IAppReloader>(), sp.GetService<ILogger<ReloadStep>>()),
+        ], sp.GetService<ILogger<InstallPipeline>>()));
 
         return services.BuildServiceProvider();
     }

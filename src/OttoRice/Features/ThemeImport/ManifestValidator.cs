@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using Microsoft.Extensions.Logging;
 using OttoRice.AppRegistry;
 using OttoRice.Common;
 using OttoRice.Features.ThemeImport.Models;
@@ -69,7 +70,7 @@ public static partial class ManifestValidator
         return errors;
     }
 
-    public static Result<RiceManifest> Parse(string json)
+    public static Result<RiceManifest> Parse(string json, ILogger? logger = null)
     {
         RiceManifest? manifest;
         try
@@ -82,6 +83,7 @@ public static partial class ManifestValidator
         }
         catch (JsonException ex)
         {
+            logger?.LogWarning(ex, "Manifesto não é um JSON válido.");
             return Result<RiceManifest>.Fail($"Manifesto não é um JSON válido: {ex.Message}");
         }
 
@@ -89,9 +91,15 @@ public static partial class ManifestValidator
             return Result<RiceManifest>.Fail("Manifesto vazio.");
 
         var errors = Validate(manifest);
-        return errors.Count == 0
-            ? Result<RiceManifest>.Ok(manifest)
-            : Result<RiceManifest>.Fail(string.Join(Environment.NewLine, errors));
+        if (errors.Count > 0)
+        {
+            logger?.LogWarning(
+                "Manifesto '{ThemeId}' reprovado na validação: {Errors}",
+                manifest.ThemeId, string.Join(" | ", errors));
+            return Result<RiceManifest>.Fail(string.Join(Environment.NewLine, errors));
+        }
+
+        return Result<RiceManifest>.Ok(manifest);
     }
 
     private static bool IsSafeRelativeSource(string? source)

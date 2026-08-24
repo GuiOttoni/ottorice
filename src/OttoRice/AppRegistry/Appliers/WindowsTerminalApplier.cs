@@ -5,6 +5,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 using OttoRice.Common;
 
 namespace OttoRice.AppRegistry.Appliers;
@@ -16,7 +17,7 @@ namespace OttoRice.AppRegistry.Appliers;
 /// Limitação conhecida: o arquivo pode conter comentários (JSONC); eles são aceitos na
 /// leitura mas descartados na escrita.
 /// </summary>
-public sealed class WindowsTerminalApplier
+public sealed class WindowsTerminalApplier(ILogger<WindowsTerminalApplier>? logger = null)
 {
     private static readonly JsonDocumentOptions ParseOptions = new()
     {
@@ -68,6 +69,9 @@ public sealed class WindowsTerminalApplier
         }
 
         var json = rootNode.ToJsonString(new JsonSerializerOptions { WriteIndented = true });
-        await AtomicFileWriter.WriteAllTextAsync(targetPath, json, ct);
+        await AtomicFileWriter.WriteAllTextAsync(targetPath, json, ct, logger);
+        logger?.LogInformation(
+            "Esquema '{SchemeName}' injetado em '{TargetPath}' (padrão: {SetAsDefault}).",
+            schemeName, targetPath, setAsDefault);
     }
 }

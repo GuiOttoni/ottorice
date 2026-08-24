@@ -1,0 +1,40 @@
+{
+  "schemaVersion": "1.0",
+  "themeId": "voidhaze",
+  "name": "Voidhaze",
+  "author": "ottorice",
+  "preview": "assets/preview.png",
+  "dependencies": [
+    { "wingetId": "glzr-io.glazewm", "minVersion": "3.0.0" },
+    { "wingetId": "AmN.yasb" },
+    { "wingetId": "CharlesMilette.TranslucentTB" }
+  ],
+  "targets": [
+    {
+      "app": "glazewm",
+      "action": "override",
+      "source": "configs/glazewm/config.yaml"
+    },
+    {
+      "app": "yasb",
+      "action": "override",
+      "source": "configs/yasb"
+    },
+    {
+      "app": "windows_terminal",
+      "action": "merge_scheme",
+      "source": "configs/wt-scheme.json",
+      "setAsDefault": true
+    },
+    {
+      "app": "translucenttb",
+      "action": "override",
+      "source": "configs/translucenttb/settings.json"
+    },
+    {
+      "app": "wallpaper",
+      "action": "set",
+      "source": "assets/wallpaper.png"
+    }
+  ]
+}

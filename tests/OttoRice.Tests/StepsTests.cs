@@ -202,4 +202,53 @@ public class AppReloaderTests
         Assert.False(result.IsSuccess);
         Assert.Contains("não encontrado", result.Error);
     }
+
+    [Fact]
+    public async Task TranslucentTb_kills_running_instance_by_pid_and_restarts_it()
+    {
+        const string exePath = @"C:\packages\translucenttb-hash\TranslucentTB.exe";
+        var resolver = Substitute.For<IExecutableResolver>();
+        resolver.Resolve("TranslucentTB").Returns(exePath);
+
+        var runner = Substitute.For<IProcessRunner>();
+        runner.FindProcessIds("TranslucentTB").Returns([111, 222]);
+        runner.TryKill(Arg.Any<int>()).Returns(true);
+
+        var result = await new AppReloader(runner, resolver).ReloadAsync(ReloadAction.TranslucentTb);
+
+        Assert.True(result.IsSuccess, result.Error);
+        runner.Received(1).TryKill(111);
+        runner.Received(1).TryKill(222);
+        runner.Received(1).StartDetached(exePath, string.Empty);
+    }
+
+    [Fact]
+    public async Task TranslucentTb_starts_fresh_when_not_already_running()
+    {
+        const string exePath = @"C:\packages\translucenttb-hash\TranslucentTB.exe";
+        var resolver = Substitute.For<IExecutableResolver>();
+        resolver.Resolve("TranslucentTB").Returns(exePath);
+
+        var runner = Substitute.For<IProcessRunner>();
+        runner.FindProcessIds("TranslucentTB").Returns([]);
+
+        var result = await new AppReloader(runner, resolver).ReloadAsync(ReloadAction.TranslucentTb);
+
+        Assert.True(result.IsSuccess, result.Error);
+        runner.DidNotReceive().TryKill(Arg.Any<int>());
+        runner.Received(1).StartDetached(exePath, string.Empty);
+    }
+
+    [Fact]
+    public async Task TranslucentTb_fails_cleanly_when_not_installed()
+    {
+        var resolver = Substitute.For<IExecutableResolver>();
+        resolver.Resolve("TranslucentTB").Returns((string?)null);
+
+        var result = await new AppReloader(Substitute.For<IProcessRunner>(), resolver)
+            .ReloadAsync(ReloadAction.TranslucentTb);
+
+        Assert.False(result.IsSuccess);
+        Assert.Contains("TranslucentTB", result.Error);
+    }
 }
