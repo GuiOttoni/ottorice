@@ -27,43 +27,8 @@ public sealed class AppReloader(
             // Zebar é iniciado/gerenciado pelos startup_commands do próprio GlazeWM.
             ReloadAction.Zebar => Result.Ok(),
             ReloadAction.None or ReloadAction.Wallpaper => Result.Ok(),
-            ReloadAction.TranslucentTb => RestartTranslucentTb(),
             _ => Result.Fail($"Ação de reload desconhecida: {action}"),
         };
-    }
-
-    /// <summary>
-    /// TranslucentTB observa o settings.json em tempo real nas versões atuais, mas para
-    /// manter o mesmo padrão previsível dos demais reloaders (e cobrir versões que não
-    /// recarreguem sozinhas), encerra o processo por PID — nunca por nome em massa — e
-    /// sobe uma nova instância a partir do executável resolvido.
-    /// </summary>
-    private Result RestartTranslucentTb()
-    {
-        var exePath = resolver.Resolve("TranslucentTB");
-        if (exePath is null)
-        {
-            logger?.LogWarning("'TranslucentTB' não encontrado — verifique a instalação.");
-            return Result.Fail("TranslucentTB não encontrado, verifique a instalação.");
-        }
-
-        foreach (var pid in runner.FindProcessIds("TranslucentTB"))
-        {
-            if (!runner.TryKill(pid))
-                logger?.LogWarning("Falha ao encerrar TranslucentTB (pid {Pid}).", pid);
-        }
-
-        try
-        {
-            runner.StartDetached(exePath, string.Empty);
-            logger?.LogInformation("TranslucentTB reiniciado a partir de '{ExePath}'.", exePath);
-            return Result.Ok();
-        }
-        catch (Exception ex) when (ex is Win32Exception or InvalidOperationException)
-        {
-            logger?.LogError(ex, "Falha ao iniciar '{ExePath}'.", exePath);
-            return Result.Fail($"Falha ao iniciar '{exePath}': {ex.Message}");
-        }
     }
 
     private async Task<Result> ReloadOrStartAsync(

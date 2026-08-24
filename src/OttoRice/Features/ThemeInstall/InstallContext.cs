@@ -21,6 +21,7 @@ public sealed class InstallContext
     public List<FileOperation> Operations { get; } = [];
     public BackupSessionInfo? BackupSession { get; set; }
     public string? PreviousWallpaperPath { get; set; }
+    public bool? PreviousTaskbarAutoHide { get; set; }
     public List<string> WingetIdsInstalled { get; } = [];
 
     public void Report(string message) => Progress?.Invoke(message);

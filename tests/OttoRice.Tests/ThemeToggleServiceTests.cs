@@ -13,13 +13,14 @@ public class ThemeToggleServiceTests : IDisposable
     private readonly ThemeToggleService _toggle;
 
     private readonly IExecutableResolver _resolver = Substitute.For<IExecutableResolver>();
+    private readonly ITaskbarService _taskbar = Substitute.For<ITaskbarService>();
 
     public ThemeToggleServiceTests()
     {
         _store = new ThemeStateStore(_dir);
         // Resolver "identidade": os testes continuam asserindo pelo nome do comando.
         _resolver.Resolve(Arg.Any<string>()).Returns(call => call.Arg<string>());
-        _toggle = new ThemeToggleService(_runner, _wallpaper, _store, _resolver);
+        _toggle = new ThemeToggleService(_runner, _wallpaper, _store, _resolver, _taskbar);
         _runner.RunAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
                .Returns(new ProcessResult(0, "", ""));
         _runner.FindProcessIds(Arg.Any<string>()).Returns([]);

@@ -8,12 +8,14 @@ using OttoRice.Features.BackupRestore;
 namespace OttoRice.Features.ThemeInstall.Steps;
 
 /// <summary>
-/// Snapshot de tudo que será tocado: arquivos de config (sessão de backup) e o
-/// wallpaper atual. A compensação desta etapa é o rollback do pipeline inteiro.
+/// Snapshot de tudo que será tocado: arquivos de config (sessão de backup), wallpaper e
+/// estado de auto-hide da taskbar atuais. A compensação desta etapa é o rollback do
+/// pipeline inteiro.
 /// </summary>
 public sealed class BackupStep(
     BackupSessionStore store,
     IWallpaperService wallpaper,
+    ITaskbarService taskbar,
     ILogger<BackupStep>? logger = null) : IInstallStep
 {
     public string Name => "Backup";
@@ -30,6 +32,9 @@ public sealed class BackupStep(
         if (context.Operations.Any(op => op.Target.Action == "set"))
             context.PreviousWallpaperPath = wallpaper.GetCurrentPath();
 
+        if (context.Operations.Any(op => op.Target.App == "glazewm"))
+            context.PreviousTaskbarAutoHide = taskbar.GetAutoHide();
+
         logger?.LogInformation("Backup criado (sessão {SessionId}).", context.BackupSession.Id);
         context.Report($"Backup criado (sessão {context.BackupSession.Id}).");
         return Result.Ok();
@@ -45,6 +50,9 @@ public sealed class BackupStep(
 
         if (context.PreviousWallpaperPath is not null)
             wallpaper.Set(context.PreviousWallpaperPath);
+
+        if (context.PreviousTaskbarAutoHide is { } autoHide)
+            taskbar.SetAutoHide(autoHide);
 
         logger?.LogInformation("Backup da sessão {SessionId} compensado (rollback).", context.BackupSession?.Id);
     }

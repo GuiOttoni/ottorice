@@ -1,4 +1,3 @@
-using NSubstitute;
 using OttoRice.Common;
 using OttoRice.Features.ThemeImport.Models;
 using OttoRice.Features.ThemeInstall;
@@ -10,7 +9,6 @@ public class TargetPlannerTests : IDisposable
     private readonly string _dir = Directory.CreateTempSubdirectory("ottorice-planner").FullName;
     private readonly string _themeDir;
     private readonly string _fakeUserProfile;
-    private readonly IExecutableResolver _resolver = Substitute.For<IExecutableResolver>();
     private readonly TargetPlanner _planner;
 
     public TargetPlannerTests()
@@ -26,7 +24,6 @@ public class TargetPlannerTests : IDisposable
 
         _planner = new TargetPlanner(
             new WindowsTerminalLocator(Path.Combine(_dir, "localappdata")),
-            _resolver,
             path => path.Replace("%USERPROFILE%", _fakeUserProfile));
     }
 
@@ -106,82 +103,22 @@ public class TargetPlannerTests : IDisposable
     }
 
     [Fact]
-    public void Executable_backed_app_resolves_config_root_from_real_exe_directory()
+    public void File_override_with_unrecognized_name_lands_under_config_root_not_a_wrong_known_file()
     {
-        // TranslucentTB: sem ConfigRoot estático — a pasta de destino vem da pasta do
-        // executável real resolvido em runtime, não de um caminho fixo do registry.
-        var realExeDir = Path.Combine(_dir, "packages", "translucenttb-hash");
-        Directory.CreateDirectory(realExeDir);
-        var realExePath = Path.Combine(realExeDir, "TranslucentTB.exe");
-        File.WriteAllText(realExePath, "fake exe");
-        _resolver.Resolve("TranslucentTB").Returns(realExePath);
-
-        WriteThemeFile("configs/translucenttb/settings.json");
-        var manifest = Manifest(new RiceTarget
-        {
-            App = "translucenttb", Action = "override", Source = "configs/translucenttb/settings.json",
-        });
+        // Regressão: antes, um arquivo de tema sem nome reconhecido caía silenciosamente no
+        // primeiro ConfigPaths do app — para YASB isso significava sobrescrever config.yaml
+        // com o conteúdo de um arquivo com nome errado. Agora ele nunca "adivinha" um dos
+        // ConfigPaths: cai no ConfigRoot com o próprio nome (arquivo extra, não substitui
+        // nada existente).
+        WriteThemeFile("configs/style.css"); // nome errado — YASB espera "styles.css"
+        var manifest = Manifest(new RiceTarget { App = "yasb", Action = "override", Source = "configs/style.css" });
 
         var plan = _planner.Build(manifest, _themeDir);
 
         Assert.True(plan.IsSuccess, plan.Error);
-        Assert.Equal(Path.Combine(realExeDir, "settings.json"), Assert.Single(plan.Value!).TargetPath);
-    }
-
-    [Fact]
-    public void Executable_backed_app_follows_symlink_to_real_exe_directory()
-    {
-        // Winget portable expõe o exe via symlink em %LOCALAPPDATA%\Microsoft\WinGet\Links —
-        // gravar ao lado do symlink não teria efeito: o planner precisa seguir o link até
-        // o diretório real antes de montar o caminho de destino.
-        var realExeDir = Path.Combine(_dir, "packages", "translucenttb-hash");
-        Directory.CreateDirectory(realExeDir);
-        var realExePath = Path.Combine(realExeDir, "TranslucentTB.exe");
-        File.WriteAllText(realExePath, "fake exe");
-
-        var linkDir = Path.Combine(_dir, "links");
-        Directory.CreateDirectory(linkDir);
-        var linkPath = Path.Combine(linkDir, "TranslucentTB.exe");
-        try
-        {
-            File.CreateSymbolicLink(linkPath, realExePath);
-        }
-        catch (Exception ex) when (ex is UnauthorizedAccessException or IOException)
-        {
-            // Ambiente sem privilégio para criar symlinks (ex.: CI sem modo desenvolvedor) —
-            // o comportamento sem symlink já é coberto pelo teste acima.
-            return;
-        }
-        _resolver.Resolve("TranslucentTB").Returns(linkPath);
-
-        WriteThemeFile("configs/translucenttb/settings.json");
-        var manifest = Manifest(new RiceTarget
-        {
-            App = "translucenttb", Action = "override", Source = "configs/translucenttb/settings.json",
-        });
-
-        var plan = _planner.Build(manifest, _themeDir);
-
-        Assert.True(plan.IsSuccess, plan.Error);
-        Assert.Equal(Path.Combine(realExeDir, "settings.json"), Assert.Single(plan.Value!).TargetPath);
-    }
-
-    [Fact]
-    public void Executable_backed_app_fails_cleanly_when_not_installed()
-    {
-        _resolver.Resolve("TranslucentTB").Returns((string?)null);
-
-        WriteThemeFile("configs/translucenttb/settings.json");
-        var manifest = Manifest(new RiceTarget
-        {
-            App = "translucenttb", Action = "override", Source = "configs/translucenttb/settings.json",
-        });
-
-        var plan = _planner.Build(manifest, _themeDir);
-
-        Assert.False(plan.IsSuccess);
-        Assert.Contains("TranslucentTB", plan.Error);
-        Assert.Contains("verifique a instalação", plan.Error);
+        var op = Assert.Single(plan.Value!);
+        Assert.Equal(Path.Combine(_fakeUserProfile, ".config", "yasb", "style.css"), op.TargetPath);
+        Assert.NotEqual(Path.Combine(_fakeUserProfile, ".config", "yasb", "config.yaml"), op.TargetPath);
     }
 
     public void Dispose() => Directory.Delete(_dir, recursive: true);

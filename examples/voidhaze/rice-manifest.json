@@ -6,8 +6,7 @@
   "preview": "assets/preview.png",
   "dependencies": [
     { "wingetId": "glzr-io.glazewm", "minVersion": "3.0.0" },
-    { "wingetId": "AmN.yasb" },
-    { "wingetId": "CharlesMilette.TranslucentTB" }
+    { "wingetId": "AmN.yasb" }
   ],
   "targets": [
     {
@@ -25,11 +24,6 @@
       "action": "merge_scheme",
       "source": "configs/wt-scheme.json",
       "setAsDefault": true
-    },
-    {
-      "app": "translucenttb",
-      "action": "override",
-      "source": "configs/translucenttb/settings.json"
     },
     {
       "app": "wallpaper",

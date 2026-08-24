@@ -23,6 +23,7 @@ public class EndToEndInstallTests : IDisposable
     private readonly string _wtSettingsPath;
     private readonly IWinGetClient _winGet = Substitute.For<IWinGetClient>();
     private readonly IWallpaperService _wallpaper = Substitute.For<IWallpaperService>();
+    private readonly ITaskbarService _taskbar = Substitute.For<ITaskbarService>();
     private readonly IAppReloader _reloader = Substitute.For<IAppReloader>();
     private readonly BackupSessionStore _backups;
 
@@ -75,17 +76,15 @@ public class EndToEndInstallTests : IDisposable
     {
         var planner = new TargetPlanner(
             new WindowsTerminalLocator(Path.Combine(_sandbox, "localappdata")),
-            Substitute.For<IExecutableResolver>(),
             path => path.Replace("%USERPROFILE%", _fakeUserProfile));
 
         IInstallStep[] steps =
         [
-            // Dependências antes do Planejamento: reflete a ordem real do App.axaml.cs —
-            // o Planejamento pode depender de um executável que só existe depois do WinGet rodar.
+            // Dependências antes do Planejamento: reflete a ordem real do App.axaml.cs.
             new DependencyStep(_winGet),
             new PlanStep(planner),
-            new BackupStep(_backups, _wallpaper),
-            new ApplyStep(new FileOverrideApplier(), new WindowsTerminalApplier(), _wallpaper),
+            new BackupStep(_backups, _wallpaper, _taskbar),
+            new ApplyStep(new FileOverrideApplier(), new WindowsTerminalApplier(), _wallpaper, _taskbar),
             failOnReload ? new FailingStep() : new ReloadStep(_reloader),
         ];
         return new InstallPipeline(steps);
@@ -127,52 +126,26 @@ public class EndToEndInstallTests : IDisposable
     }
 
     /// <summary>
-    /// Regressão do bug real encontrado no dogfooding (2026-08-24): o Planejamento resolvia o
-    /// diretório de config do TranslucentTB pelo executável real (ver
-    /// TargetPlanner.ResolveConfigRootFromExecutable), mas o pipeline rodava Planejamento antes
-    /// de Dependências — então numa instalação limpa (TranslucentTB ainda não instalado), o
-    /// resolver não achava o exe e o Planejamento falhava com "TranslucentTB não encontrado".
-    /// Prova que, com Dependências antes de Planejamento, o exe "aparece" (via WinGet) a tempo.
+    /// Cobertura do segundo tema de exemplo: instala de ponta a ponta e prova que, por ter
+    /// glazewm entre os apps geridos, a taskbar nativa é ocultada automaticamente ao aplicar
+    /// (ver ApplyStep) — sem depender de nenhuma ferramenta externa de terceiros.
     /// </summary>
     [Fact]
-    public async Task Translucenttb_executable_is_resolvable_only_after_dependencies_install_it()
+    public async Task Voidhaze_full_install_writes_every_target_and_hides_the_native_taskbar()
     {
         var manifestJson = await File.ReadAllTextAsync(
             Path.Combine(VoidhazeThemeDir, ThemeFetcher.ManifestFileName));
         var manifest = ManifestValidator.Parse(manifestJson);
         Assert.True(manifest.IsSuccess, manifest.Error);
 
-        var translucentTbExe = Path.Combine(_sandbox, "packages", "translucenttb-hash", "TranslucentTB.exe");
-        var resolver = Substitute.For<IExecutableResolver>();
-        resolver.Resolve("TranslucentTB").Returns((string?)null); // ainda não instalado
-
-        var winGet = Substitute.For<IWinGetClient>();
-        winGet.IsAvailableAsync(Arg.Any<CancellationToken>()).Returns(true);
-        winGet.IsInstalledAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(false);
-        winGet.InstallAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(ci =>
-        {
-            if ((string)ci[0] == "CharlesMilette.TranslucentTB")
-            {
-                Directory.CreateDirectory(Path.GetDirectoryName(translucentTbExe)!);
-                File.WriteAllText(translucentTbExe, "fake exe");
-                resolver.Resolve("TranslucentTB").Returns(translucentTbExe);
-            }
-            return Result.Ok();
-        });
-
-        var planner = new TargetPlanner(
-            new WindowsTerminalLocator(Path.Combine(_sandbox, "localappdata")),
-            resolver,
-            path => path.Replace("%USERPROFILE%", _fakeUserProfile));
-
-        var pipeline = new InstallPipeline([new DependencyStep(winGet), new PlanStep(planner)]);
         var context = new InstallContext { Manifest = manifest.Value!, ThemeDirectory = VoidhazeThemeDir };
-
-        var result = await pipeline.RunAsync(context);
+        var result = await BuildPipeline().RunAsync(context);
 
         Assert.True(result.IsSuccess, result.Error);
-        Assert.Contains(context.Operations, op =>
-            op.Target.App == "translucenttb" && op.TargetPath.EndsWith("settings.json"));
+        Assert.True(File.Exists(Path.Combine(_fakeUserProfile, ".glzr", "glazewm", "config.yaml")));
+        Assert.True(File.Exists(Path.Combine(_fakeUserProfile, ".config", "yasb", "config.yaml")));
+        _wallpaper.Received(1).Set(Path.Combine(VoidhazeThemeDir, "assets", "wallpaper.png"));
+        _taskbar.Received(1).SetAutoHide(true);
     }
 
     [Fact]

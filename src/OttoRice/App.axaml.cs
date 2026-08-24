@@ -57,6 +57,7 @@ public partial class App : Application
             sp => new ExecutableResolver(logger: sp.GetService<ILogger<ExecutableResolver>>()));
         services.AddSingleton<IWinGetClient, WinGetClient>();
         services.AddSingleton<IWallpaperService, WindowsWallpaperService>();
+        services.AddSingleton<ITaskbarService, TaskbarService>();
         services.AddSingleton<IAppReloader, AppReloader>();
         services.AddSingleton<WindowsTerminalLocator>();
         services.AddSingleton<FileOverrideApplier>();
@@ -88,20 +89,20 @@ public partial class App : Application
 
         services.AddTransient<InstallPipeline>(sp => new InstallPipeline(
         [
-            // Dependências primeiro: o Planejamento pode precisar resolver o caminho real de um
-            // executável recém-instalado (ex.: TranslucentTB, cuja config fica ao lado do exe
-            // real — ver TargetPlanner.ResolveConfigRootFromExecutable), então precisa rodar
-            // depois que o WinGet já instalou tudo.
+            // Dependências antes do Planejamento: instalar via WinGet primeiro evita que o
+            // Planejamento precise adivinhar sobre ferramentas ainda não presentes na máquina.
             new DependencyStep(sp.GetRequiredService<IWinGetClient>(), sp.GetService<ILogger<DependencyStep>>()),
             new PlanStep(sp.GetRequiredService<TargetPlanner>(), sp.GetService<ILogger<PlanStep>>()),
             new BackupStep(
                 sp.GetRequiredService<BackupSessionStore>(),
                 sp.GetRequiredService<IWallpaperService>(),
+                sp.GetRequiredService<ITaskbarService>(),
                 sp.GetService<ILogger<BackupStep>>()),
             new ApplyStep(
                 sp.GetRequiredService<FileOverrideApplier>(),
                 sp.GetRequiredService<WindowsTerminalApplier>(),
                 sp.GetRequiredService<IWallpaperService>(),
+                sp.GetRequiredService<ITaskbarService>(),
                 sp.GetService<ILogger<ApplyStep>>()),
             new ReloadStep(sp.GetRequiredService<IAppReloader>(), sp.GetService<ILogger<ReloadStep>>()),
         ], sp.GetService<ILogger<InstallPipeline>>()));
