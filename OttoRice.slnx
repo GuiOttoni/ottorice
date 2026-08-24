@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/OttoRice/OttoRice.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/OttoRice.Tests/OttoRice.Tests.csproj" />
+  </Folder>
+</Solution>
