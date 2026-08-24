@@ -5,6 +5,7 @@
         xmlns:local="using:OttoRice"
         xmlns:backup="using:OttoRice.Features.BackupRestore"
         xmlns:install="using:OttoRice.Features.ThemeInstall"
+        xmlns:editor="using:OttoRice.Features.ThemeEditor.Models"
         xmlns:conv="using:OttoRice.Converters"
         mc:Ignorable="d" d:DesignWidth="1000" d:DesignHeight="680"
         x:Class="OttoRice.MainWindow"
@@ -217,6 +218,139 @@
                             </ListBox.ItemTemplate>
                         </ListBox>
                     </Border>
+                </Grid>
+            </TabItem>
+            <!-- ══ Editor de manifesto ═══════════════════════════════════════ -->
+            <TabItem Header="EDITAR MANIFESTO">
+                <Grid x:Name="EditorRoot" RowDefinitions="Auto,*" Margin="20,16" DataContext="{Binding Editor}">
+
+                    <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="8">
+                        <Button Content="ABRIR..." Classes="btn-secondary" Command="{Binding BrowseCommand}"
+                                ToolTip.Tip="Selecionar um rice-manifest.json ou a pasta de um tema local" />
+                        <Button Content="SALVAR" Classes="btn-primary" Command="{Binding SaveCommand}" />
+                        <TextBlock Text="{Binding ManifestPath}" Classes="muted" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                    </StackPanel>
+
+                    <ScrollViewer Grid.Row="1" Margin="0,16,0,0">
+                        <StackPanel Spacing="16" IsEnabled="{Binding IsLoaded}">
+
+                            <!-- Campos de topo -->
+                            <Border Classes="card">
+                                <StackPanel Spacing="8">
+                                    <TextBlock Text="METADADOS DO TEMA" Classes="eyebrow" />
+                                    <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto,Auto" ColumnSpacing="8" RowSpacing="6">
+                                        <TextBlock Grid.Row="0" Grid.Column="0" Text="themeId" Classes="dim" VerticalAlignment="Center" />
+                                        <TextBox Grid.Row="0" Grid.Column="1" Text="{Binding ThemeId}" Watermark="ex.: blackturq-minimal" />
+                                        <TextBlock Grid.Row="1" Grid.Column="0" Text="name" Classes="dim" VerticalAlignment="Center" />
+                                        <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding Name}" Watermark="Nome exibido do tema" />
+                                        <TextBlock Grid.Row="2" Grid.Column="0" Text="author" Classes="dim" VerticalAlignment="Center" />
+                                        <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding Author}" Watermark="(opcional)" />
+                                        <TextBlock Grid.Row="3" Grid.Column="0" Text="preview" Classes="dim" VerticalAlignment="Center" />
+                                        <TextBox Grid.Row="3" Grid.Column="1" Text="{Binding Preview}" Watermark="caminho relativo, ex.: assets/preview.png" />
+                                    </Grid>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- Dependencies -->
+                            <Border Classes="card">
+                                <StackPanel Spacing="8">
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <TextBlock Text="DEPENDÊNCIAS (WINGET)" Classes="eyebrow" VerticalAlignment="Center" />
+                                        <Button Content="+ ADICIONAR" Classes="btn-secondary" Command="{Binding AddDependencyCommand}" />
+                                    </StackPanel>
+                                    <ItemsControl ItemsSource="{Binding Dependencies}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate x:DataType="editor:EditableDependency">
+                                                <Grid ColumnDefinitions="*,*,Auto" ColumnSpacing="8" Margin="0,2">
+                                                    <TextBox Grid.Column="0" Text="{Binding WingetId}" Watermark="wingetId" />
+                                                    <TextBox Grid.Column="1" Text="{Binding MinVersion}" Watermark="minVersion (opcional)" />
+                                                    <Button Grid.Column="2" Content="✕" Classes="btn-secondary"
+                                                            Command="{Binding #EditorRoot.DataContext.RemoveDependencyCommand}"
+                                                            CommandParameter="{Binding}" />
+                                                </Grid>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- Targets -->
+                            <Border Classes="card">
+                                <StackPanel Spacing="8">
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <TextBlock Text="TARGETS" Classes="eyebrow" VerticalAlignment="Center" />
+                                        <Button Content="+ ADICIONAR" Classes="btn-secondary" Command="{Binding AddTargetCommand}" />
+                                    </StackPanel>
+                                    <ItemsControl ItemsSource="{Binding Targets}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate x:DataType="editor:EditableTarget">
+                                                <Border BorderBrush="{DynamicResource BorderBrush2}" BorderThickness="0,0,0,1"
+                                                        Padding="0,8" Margin="0,2">
+                                                    <StackPanel Spacing="6">
+                                                        <Grid ColumnDefinitions="*,*,2*,Auto" ColumnSpacing="8">
+                                                            <ComboBox Grid.Column="0"
+                                                                      ItemsSource="{Binding #EditorRoot.DataContext.AvailableApps}"
+                                                                      SelectedItem="{Binding App}"
+                                                                      PlaceholderText="app" HorizontalAlignment="Stretch" />
+                                                            <ComboBox Grid.Column="1"
+                                                                      ItemsSource="{Binding AllowedActions}"
+                                                                      SelectedItem="{Binding Action}"
+                                                                      PlaceholderText="action" HorizontalAlignment="Stretch" />
+                                                            <TextBox Grid.Column="2" Text="{Binding Source}"
+                                                                     Watermark="source (caminho relativo ao tema)" />
+                                                            <Button Grid.Column="3" Content="✕" Classes="btn-secondary"
+                                                                    Command="{Binding #EditorRoot.DataContext.RemoveTargetCommand}"
+                                                                    CommandParameter="{Binding}" />
+                                                        </Grid>
+
+                                                        <CheckBox Content="setAsDefault (Windows Terminal)"
+                                                                  IsChecked="{Binding SetAsDefault}"
+                                                                  IsVisible="{Binding IsWindowsTerminal}" />
+
+                                                        <StackPanel IsVisible="{Binding IsConfigureMod}" Spacing="4" Margin="0,4,0,0">
+                                                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                                                <TextBlock Text="settings (mod Windhawk)" Classes="dim" VerticalAlignment="Center" />
+                                                                <Button Content="+ SETTING" Classes="btn-secondary"
+                                                                        Command="{Binding #EditorRoot.DataContext.AddSettingCommand}"
+                                                                        CommandParameter="{Binding}" />
+                                                            </StackPanel>
+                                                            <ItemsControl ItemsSource="{Binding Settings}">
+                                                                <ItemsControl.ItemTemplate>
+                                                                    <DataTemplate x:DataType="editor:EditableSetting">
+                                                                        <Grid ColumnDefinitions="*,*,Auto" ColumnSpacing="8" Margin="0,2">
+                                                                            <TextBox Grid.Column="0" Text="{Binding Key}" Watermark="chave" />
+                                                                            <TextBox Grid.Column="1" Text="{Binding Value}" Watermark="valor" />
+                                                                            <Button Grid.Column="2" Content="✕" Classes="btn-secondary"
+                                                                                    Command="{Binding #EditorRoot.DataContext.RemoveSettingCommand}"
+                                                                                    CommandParameter="{Binding}" />
+                                                                        </Grid>
+                                                                    </DataTemplate>
+                                                                </ItemsControl.ItemTemplate>
+                                                            </ItemsControl>
+                                                        </StackPanel>
+                                                    </StackPanel>
+                                                </Border>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </StackPanel>
+                            </Border>
+
+                            <!-- Erros de validação -->
+                            <Border Classes="card" IsVisible="{Binding HasValidationErrors}">
+                                <StackPanel Spacing="6">
+                                    <TextBlock Text="ERROS DE VALIDAÇÃO" Classes="eyebrow" Foreground="{DynamicResource GoldBrush}" />
+                                    <ItemsControl ItemsSource="{Binding ValidationErrors}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <TextBlock Text="{Binding StringFormat='› {0}'}" Classes="dim" TextWrapping="Wrap" />
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
+                    </ScrollViewer>
                 </Grid>
             </TabItem>
         </TabControl>
