@@ -7,7 +7,9 @@ using Microsoft.Extensions.DependencyInjection;
 using OttoRice.AppRegistry.Appliers;
 using OttoRice.AppRegistry.Reloaders;
 using OttoRice.Common;
+using System.Net.Http;
 using OttoRice.Features.BackupRestore;
+using OttoRice.Features.ThemeImport;
 using OttoRice.Features.ThemeInstall;
 using OttoRice.Features.ThemeInstall.Steps;
 using Serilog;
@@ -30,7 +32,10 @@ public partial class App : Application
 
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
-            desktop.MainWindow = new MainWindow();
+            desktop.MainWindow = new MainWindow
+            {
+                DataContext = Services.GetRequiredService<MainViewModel>(),
+            };
         }
 
         base.OnFrameworkInitializationCompleted();
@@ -65,6 +70,18 @@ public partial class App : Application
         services.AddSingleton<BackupSessionStore>();
         services.AddSingleton<InstallHistoryStore>();
         services.AddSingleton<TargetPlanner>();
+
+        services.AddSingleton(_ =>
+        {
+            var http = new HttpClient();
+            http.DefaultRequestHeaders.UserAgent.ParseAdd("OttoRice/0.1");
+            return http;
+        });
+        services.AddSingleton<IThemeFetcher>(sp => new ThemeFetcher(sp.GetRequiredService<HttpClient>()));
+
+        services.AddTransient<InstallViewModel>();
+        services.AddTransient<BackupsViewModel>();
+        services.AddTransient<MainViewModel>();
 
         services.AddTransient<InstallPipeline>(sp => new InstallPipeline(
         [
