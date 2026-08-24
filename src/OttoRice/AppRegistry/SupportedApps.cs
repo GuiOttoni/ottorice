@@ -17,17 +17,17 @@ public sealed record AppDefinition(
     string DisplayName,
     IReadOnlyList<string> ConfigPaths,
     IReadOnlySet<string> AllowedActions,
-    ReloadAction Reload);
+    ReloadAction Reload,
+    string? ConfigRoot = null);
 
 /// <summary>
 /// Registry dos apps suportados: é a whitelist de segurança do OttoRice.
 /// O manifesto declara só o app alvo; caminhos e reload vêm daqui, nunca do tema.
-/// Caminhos com {wt_settings} são resolvidos em runtime (WindowsTerminalLocator).
+/// ConfigPaths: arquivos individuais conhecidos (match por nome no planner).
+/// ConfigRoot: diretório-base para sources de tema que são pastas inteiras.
 /// </summary>
 public static class SupportedApps
 {
-    public const string WtSettingsToken = "{wt_settings}";
-
     public static readonly IReadOnlyDictionary<string, AppDefinition> All =
         new Dictionary<string, AppDefinition>
         {
@@ -35,23 +35,26 @@ public static class SupportedApps
                 "glazewm", "GlazeWM v3",
                 [@"%USERPROFILE%\.glzr\glazewm\config.yaml"],
                 new HashSet<string> { "override" },
-                ReloadAction.GlazeWm),
+                ReloadAction.GlazeWm,
+                ConfigRoot: @"%USERPROFILE%\.glzr\glazewm"),
 
             ["zebar"] = new(
                 "zebar", "Zebar",
-                [@"%USERPROFILE%\.glzr\zebar\"],
+                [],
                 new HashSet<string> { "override" },
-                ReloadAction.Zebar),
+                ReloadAction.Zebar,
+                ConfigRoot: @"%USERPROFILE%\.glzr\zebar"),
 
             ["yasb"] = new(
                 "yasb", "YASB Reborn",
                 [@"%USERPROFILE%\.config\yasb\config.yaml", @"%USERPROFILE%\.config\yasb\styles.css"],
                 new HashSet<string> { "override" },
-                ReloadAction.Yasb),
+                ReloadAction.Yasb,
+                ConfigRoot: @"%USERPROFILE%\.config\yasb"),
 
             ["windows_terminal"] = new(
                 "windows_terminal", "Windows Terminal",
-                [WtSettingsToken],
+                [],
                 new HashSet<string> { "merge_scheme" },
                 ReloadAction.None),
 

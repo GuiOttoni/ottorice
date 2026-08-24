@@ -5,11 +5,18 @@ using System.Threading.Tasks;
 
 namespace OttoRice.Common;
 
+public interface IWinGetClient
+{
+    Task<bool> IsAvailableAsync(CancellationToken ct = default);
+    Task<bool> IsInstalledAsync(string packageId, CancellationToken ct = default);
+    Task<Result> InstallAsync(string packageId, CancellationToken ct = default);
+}
+
 /// <summary>
 /// Wrapper do WinGet CLI. Instalações devem ser chamadas em série — o WinGet
 /// não suporta operações concorrentes (lock no banco local).
 /// </summary>
-public sealed partial class WinGetClient(IProcessRunner runner)
+public sealed partial class WinGetClient(IProcessRunner runner) : IWinGetClient
 {
     // APPINSTALLER_CLI_ERROR_PACKAGE_ALREADY_INSTALLED (0x8A15002B)
     private const int AlreadyInstalled = unchecked((int)0x8A15002B);

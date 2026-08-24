@@ -5,7 +5,11 @@ using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
 using Microsoft.Extensions.DependencyInjection;
 using OttoRice.AppRegistry.Appliers;
+using OttoRice.AppRegistry.Reloaders;
 using OttoRice.Common;
+using OttoRice.Features.BackupRestore;
+using OttoRice.Features.ThemeInstall;
+using OttoRice.Features.ThemeInstall.Steps;
 using Serilog;
 
 namespace OttoRice;
@@ -52,10 +56,27 @@ public partial class App : Application
         var services = new ServiceCollection();
 
         services.AddSingleton<IProcessRunner, ProcessRunner>();
-        services.AddSingleton<WinGetClient>();
+        services.AddSingleton<IWinGetClient, WinGetClient>();
+        services.AddSingleton<IWallpaperService, WindowsWallpaperService>();
+        services.AddSingleton<IAppReloader, AppReloader>();
         services.AddSingleton<WindowsTerminalLocator>();
         services.AddSingleton<FileOverrideApplier>();
         services.AddSingleton<WindowsTerminalApplier>();
+        services.AddSingleton<BackupSessionStore>();
+        services.AddSingleton<InstallHistoryStore>();
+        services.AddSingleton<TargetPlanner>();
+
+        services.AddTransient<InstallPipeline>(sp => new InstallPipeline(
+        [
+            new PlanStep(sp.GetRequiredService<TargetPlanner>()),
+            new DependencyStep(sp.GetRequiredService<IWinGetClient>()),
+            new BackupStep(sp.GetRequiredService<BackupSessionStore>(), sp.GetRequiredService<IWallpaperService>()),
+            new ApplyStep(
+                sp.GetRequiredService<FileOverrideApplier>(),
+                sp.GetRequiredService<WindowsTerminalApplier>(),
+                sp.GetRequiredService<IWallpaperService>()),
+            new ReloadStep(sp.GetRequiredService<IAppReloader>()),
+        ]));
 
         return services.BuildServiceProvider();
     }

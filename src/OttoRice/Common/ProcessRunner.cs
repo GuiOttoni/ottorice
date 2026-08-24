@@ -10,6 +10,9 @@ public sealed record ProcessResult(int ExitCode, string StandardOutput, string S
 public interface IProcessRunner
 {
     Task<ProcessResult> RunAsync(string fileName, string arguments, CancellationToken ct = default);
+
+    /// <summary>Inicia um processo de longa duração (WM, barra) sem aguardar a saída.</summary>
+    void StartDetached(string fileName, string arguments);
 }
 
 public sealed class ProcessRunner : IProcessRunner
@@ -34,5 +37,16 @@ public sealed class ProcessRunner : IProcessRunner
         await process.WaitForExitAsync(ct);
 
         return new ProcessResult(process.ExitCode, await stdoutTask, await stderrTask);
+    }
+
+    public void StartDetached(string fileName, string arguments)
+    {
+        Process.Start(new ProcessStartInfo
+        {
+            FileName = fileName,
+            Arguments = arguments,
+            UseShellExecute = false,
+            CreateNoWindow = true,
+        });
     }
 }
