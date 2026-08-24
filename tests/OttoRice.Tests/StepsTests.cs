@@ -139,29 +139,67 @@ public class ReloadStepTests
 
 public class AppReloaderTests
 {
+    private const string GlazePath = @"C:\Program Files\glzr.io\GlazeWM\cli\glazewm.exe";
+    private const string YasbPath = @"C:\Program Files\YASB\yasbc.exe";
+
+    private static IExecutableResolver Resolver()
+    {
+        var resolver = Substitute.For<IExecutableResolver>();
+        resolver.Resolve("glazewm").Returns(GlazePath);
+        resolver.Resolve("yasbc").Returns(YasbPath);
+        return resolver;
+    }
+
     [Fact]
-    public async Task GlazeWm_reload_uses_whitelisted_command()
+    public async Task GlazeWm_reload_uses_whitelisted_command_on_resolved_path()
     {
         var runner = Substitute.For<IProcessRunner>();
-        runner.RunAsync("glazewm", "command wm-reload-config", Arg.Any<CancellationToken>())
+        runner.RunAsync(GlazePath, "command wm-reload-config", Arg.Any<CancellationToken>())
               .Returns(new ProcessResult(0, "", ""));
 
-        var result = await new AppReloader(runner).ReloadAsync(ReloadAction.GlazeWm);
+        var result = await new AppReloader(runner, Resolver()).ReloadAsync(ReloadAction.GlazeWm);
 
         Assert.True(result.IsSuccess);
         runner.DidNotReceiveWithAnyArgs().StartDetached(default!, default!);
     }
 
     [Fact]
-    public async Task Starts_detached_when_reload_command_fails()
+    public async Task Starts_glazewm_with_start_argument_when_not_running()
     {
+        // Regressão do dogfooding: iniciar sem "start" não sobe o WM.
         var runner = Substitute.For<IProcessRunner>();
-        runner.RunAsync("yasbc", "reload", Arg.Any<CancellationToken>())
+        runner.RunAsync(GlazePath, "command wm-reload-config", Arg.Any<CancellationToken>())
               .Returns(new ProcessResult(1, "", "not running"));
 
-        var result = await new AppReloader(runner).ReloadAsync(ReloadAction.Yasb);
+        var result = await new AppReloader(runner, Resolver()).ReloadAsync(ReloadAction.GlazeWm);
 
         Assert.True(result.IsSuccess);
-        runner.Received(1).StartDetached("yasbc", "start");
+        runner.Received(1).StartDetached(GlazePath, "start");
+    }
+
+    [Fact]
+    public async Task Starts_yasb_detached_when_reload_fails()
+    {
+        var runner = Substitute.For<IProcessRunner>();
+        runner.RunAsync(YasbPath, "reload", Arg.Any<CancellationToken>())
+              .Returns(new ProcessResult(1, "", "not running"));
+
+        var result = await new AppReloader(runner, Resolver()).ReloadAsync(ReloadAction.Yasb);
+
+        Assert.True(result.IsSuccess);
+        runner.Received(1).StartDetached(YasbPath, "start --silent");
+    }
+
+    [Fact]
+    public async Task Reports_clearly_when_executable_cannot_be_found()
+    {
+        var resolver = Substitute.For<IExecutableResolver>();
+        resolver.Resolve(Arg.Any<string>()).Returns((string?)null);
+
+        var result = await new AppReloader(Substitute.For<IProcessRunner>(), resolver)
+            .ReloadAsync(ReloadAction.GlazeWm);
+
+        Assert.False(result.IsSuccess);
+        Assert.Contains("não encontrado", result.Error);
     }
 }

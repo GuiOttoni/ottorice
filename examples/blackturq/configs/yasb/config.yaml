@@ -25,11 +25,13 @@ bars:
       right: ['cpu', 'memory']
 
 widgets:
+  # Atenção: o namespace deste widget é 'glazewm.workspaces', não 'yasb.*' como os demais.
   glazewm_workspaces:
-    type: 'yasb.glazewm_workspaces.GlazewmWorkspacesWidget'
+    type: 'glazewm.workspaces.GlazewmWorkspacesWidget'
     options:
       offline_label: 'GlazeWM offline'
-      hide_empty_workspaces: true
+      hide_if_offline: false
+      monitor_exclusive: true
 
   active_window:
     type: 'yasb.active_window.ActiveWindowWidget'

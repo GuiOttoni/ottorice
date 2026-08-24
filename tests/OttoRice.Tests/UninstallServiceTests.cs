@@ -27,9 +27,12 @@ public class UninstallServiceTests : IDisposable
                .Returns(new ProcessResult(0, "", ""));
         _runner.FindProcessIds(Arg.Any<string>()).Returns([]);
 
+        var resolver = Substitute.For<IExecutableResolver>();
+        resolver.Resolve(Arg.Any<string>()).Returns(call => call.Arg<string>());
+
         _uninstall = new UninstallService(
             _history, _backups, _stateStore,
-            new ThemeToggleService(_runner, _wallpaper, _stateStore),
+            new ThemeToggleService(_runner, _wallpaper, _stateStore, resolver),
             _winGet);
     }
 

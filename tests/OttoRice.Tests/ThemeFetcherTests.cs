@@ -146,6 +146,35 @@ public class ThemeFetcherTests : IDisposable
     }
 
     [Fact]
+    public async Task Reads_theme_from_local_folder_without_network()
+    {
+        var themeDir = Path.Combine(_dir, "meu-tema");
+        Directory.CreateDirectory(themeDir);
+        await File.WriteAllTextAsync(Path.Combine(themeDir, "rice-manifest.json"), ValidManifest);
+
+        var handler = new FakeHandler(_ => new HttpResponseMessage(HttpStatusCode.InternalServerError));
+        var result = await Fetcher(handler).FetchAsync(themeDir);
+
+        Assert.True(result.IsSuccess, result.Error);
+        Assert.Equal("tema-zip", result.Value!.Manifest.ThemeId);
+        Assert.Equal(themeDir, result.Value.ThemeDirectory);
+        Assert.Empty(handler.Urls); // nenhum request de rede
+    }
+
+    [Fact]
+    public async Task Local_folder_without_manifest_fails()
+    {
+        var themeDir = Path.Combine(_dir, "pasta-vazia");
+        Directory.CreateDirectory(themeDir);
+
+        var result = await Fetcher(new FakeHandler(_ => new HttpResponseMessage(HttpStatusCode.OK)))
+            .FetchAsync(themeDir);
+
+        Assert.False(result.IsSuccess);
+        Assert.Contains("rice-manifest.json", result.Error);
+    }
+
+    [Fact]
     public async Task Repo_not_found_fails()
     {
         var handler = new FakeHandler(_ => new HttpResponseMessage(HttpStatusCode.NotFound));

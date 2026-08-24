@@ -23,7 +23,8 @@ namespace OttoRice.Features.ThemeToggle;
 public sealed class ThemeToggleService(
     IProcessRunner runner,
     IWallpaperService wallpaper,
-    ThemeStateStore stateStore)
+    ThemeStateStore stateStore,
+    IExecutableResolver resolver)
 {
     /// <summary>Únicos processos que este serviço pode encerrar por PID.</summary>
     private static readonly HashSet<string> KillableProcesses =
@@ -91,20 +92,30 @@ public sealed class ThemeToggleService(
 
         if (state.ManagedApps.Contains("glazewm"))
         {
+            var glazewm = resolver.Resolve("glazewm");
+            if (glazewm is null)
+                return Result.Fail("GlazeWM não encontrado — reinstale o tema ou verifique a instalação.");
+
             progress?.Invoke("Iniciando GlazeWM...");
             var args = state.GlazeWmConfigPath is not null
                 ? $"start --config \"{state.GlazeWmConfigPath}\""
                 : "start";
-            runner.StartDetached("glazewm", args);
+            runner.StartDetached(glazewm, args);
         }
 
         if (state.ManagedApps.Contains("yasb"))
         {
             progress?.Invoke("Iniciando a barra YASB...");
-            var start = await TryRunAsync("yasbc", "start --silent", ct);
-            if (!start.IsSuccess)
-                runner.StartDetached("yasbc", "start --silent");
-            await TryRunAsync("yasbc", "enable-autostart", ct);
+            var yasbc = resolver.Resolve("yasbc");
+            if (yasbc is not null)
+            {
+                runner.StartDetached(yasbc, "start --silent");
+                await TryRunAsync("yasbc", "enable-autostart", ct);
+            }
+            else
+            {
+                progress?.Invoke("⚠ YASB não encontrado — barra não iniciada.");
+            }
         }
 
         await stateStore.WriteAsync(state with { IsEnabled = true }, ct);
@@ -150,7 +161,8 @@ public sealed class ThemeToggleService(
     {
         try
         {
-            var result = await runner.RunAsync(fileName, arguments, ct);
+            var exePath = resolver.Resolve(fileName) ?? fileName;
+            var result = await runner.RunAsync(exePath, arguments, ct);
             return result.ExitCode == 0
                 ? Result.Ok()
                 : Result.Fail($"'{fileName} {arguments}' saiu com código {result.ExitCode}.");

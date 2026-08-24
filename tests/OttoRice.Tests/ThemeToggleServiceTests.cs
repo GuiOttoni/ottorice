@@ -12,10 +12,14 @@ public class ThemeToggleServiceTests : IDisposable
     private readonly ThemeStateStore _store;
     private readonly ThemeToggleService _toggle;
 
+    private readonly IExecutableResolver _resolver = Substitute.For<IExecutableResolver>();
+
     public ThemeToggleServiceTests()
     {
         _store = new ThemeStateStore(_dir);
-        _toggle = new ThemeToggleService(_runner, _wallpaper, _store);
+        // Resolver "identidade": os testes continuam asserindo pelo nome do comando.
+        _resolver.Resolve(Arg.Any<string>()).Returns(call => call.Arg<string>());
+        _toggle = new ThemeToggleService(_runner, _wallpaper, _store, _resolver);
         _runner.RunAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
                .Returns(new ProcessResult(0, "", ""));
         _runner.FindProcessIds(Arg.Any<string>()).Returns([]);
@@ -81,7 +85,8 @@ public class ThemeToggleServiceTests : IDisposable
 
         Assert.True(result.IsSuccess, result.Error);
         _runner.Received(1).StartDetached("glazewm", $"start --config \"{state.GlazeWmConfigPath}\"");
-        await _runner.Received(1).RunAsync("yasbc", "start --silent", Arg.Any<CancellationToken>());
+        _runner.Received(1).StartDetached("yasbc", "start --silent");
+        await _runner.Received(1).RunAsync("yasbc", "enable-autostart", Arg.Any<CancellationToken>());
         _wallpaper.Received(1).Set(state.ThemeWallpaperPath!);
         Assert.True((await _store.ReadAsync()).IsEnabled);
     }

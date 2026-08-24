@@ -72,6 +72,11 @@ public sealed class ThemeFetcher(HttpClient http, string? cacheRootOverride = nu
 
     public async Task<Result<FetchedTheme>> FetchAsync(string repoUrl, CancellationToken ct = default)
     {
+        // Pasta local: como um autor testa o próprio tema antes de publicar no GitHub.
+        var local = repoUrl?.Trim().Trim('"');
+        if (!string.IsNullOrEmpty(local) && Directory.Exists(local))
+            return await ReadLocalThemeAsync(local, ct);
+
         var parsed = GitHubRepoRef.Parse(repoUrl);
         if (!parsed.IsSuccess)
             return Result<FetchedTheme>.Fail(parsed.Error!);
@@ -119,6 +124,18 @@ public sealed class ThemeFetcher(HttpClient http, string? cacheRootOverride = nu
         {
             File.Delete(zipPath);
         }
+    }
+
+    private async Task<Result<FetchedTheme>> ReadLocalThemeAsync(string themeDir, CancellationToken ct)
+    {
+        var manifestPath = Path.Combine(themeDir, ManifestFileName);
+        if (!File.Exists(manifestPath))
+            return Result<FetchedTheme>.Fail($"'{ManifestFileName}' não encontrado em {themeDir}.");
+
+        var manifest = ManifestValidator.Parse(await File.ReadAllTextAsync(manifestPath, ct));
+        return manifest.IsSuccess
+            ? Result<FetchedTheme>.Ok(new FetchedTheme(Path.GetFullPath(themeDir), manifest.Value!))
+            : Result<FetchedTheme>.Fail(manifest.Error!);
     }
 
     private async Task<string?> TryDownloadZipAsync(GitHubRepoRef repoRef, string branch, CancellationToken ct)

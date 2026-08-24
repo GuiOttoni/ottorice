@@ -48,6 +48,7 @@ public partial class App : Application
         var services = new ServiceCollection();
 
         services.AddSingleton<IProcessRunner, ProcessRunner>();
+        services.AddSingleton<IExecutableResolver>(_ => new ExecutableResolver());
         services.AddSingleton<IWinGetClient, WinGetClient>();
         services.AddSingleton<IWallpaperService, WindowsWallpaperService>();
         services.AddSingleton<IAppReloader, AppReloader>();

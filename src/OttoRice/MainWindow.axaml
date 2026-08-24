@@ -37,7 +37,7 @@
                         <TextBlock Text="REPOSITÓRIO DO TEMA" Classes="eyebrow" />
                         <StackPanel Orientation="Horizontal" Spacing="8">
                             <TextBox Text="{Binding ThemeUrl}"
-                                     Watermark="https://github.com/owner/repo (com rice-manifest.json)"
+                                     Watermark="https://github.com/owner/repo — ou uma pasta local do tema"
                                      Width="620"
                                      IsEnabled="{Binding !IsBusy}" />
                             <Button Content="BUSCAR" Classes="btn-secondary" Command="{Binding FetchCommand}" />
