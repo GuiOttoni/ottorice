@@ -128,7 +128,15 @@ public sealed class ConfigureWindhawkModsStep(
         {
             var result = await runner.RunAsync(cliPath, "mod list --json", ct);
             if (result.ExitCode != 0)
+            {
+                // Silencioso antes causava reinstalação (e reset de settings, ver
+                // ConfigureWindhawkModsStep) de mods que na verdade já estavam presentes,
+                // sem deixar rastro pra diagnosticar depois — logar aqui é o mínimo.
+                logger?.LogWarning(
+                    "'mod list --json' saiu com código {ExitCode} — tratando todos os mods como não instalados. StdErr: {StdErr}",
+                    result.ExitCode, result.StandardError);
                 return new HashSet<string>();
+            }
 
             using var doc = JsonDocument.Parse(result.StandardOutput);
             var ids = doc.RootElement.GetProperty("data").GetProperty("mods")
@@ -153,7 +161,14 @@ public sealed class ConfigureWindhawkModsStep(
         var sb = new StringBuilder();
         sb.AppendLine($"$cli = {PsQuote(cliPath)}");
         sb.AppendLine($"$log = {PsQuote(logPath)}");
-        sb.AppendLine("$ErrorActionPreference = 'Stop'");
+        // NUNCA setar $ErrorActionPreference = 'Stop' aqui: o windhawk-cli escreve
+        // mensagens de progresso NORMAIS em stderr (ex.: "Fetching X from repository...")
+        // mesmo numa instalação bem-sucedida. Com 'Stop', o PowerShell trata essa saída de
+        // stderr como erro terminante e aborta o script inteiro no primeiro mod — mesmo que
+        // o `mod install` por baixo tenha funcionado — confirmado em incidente real
+        // (2026-08-24): abortou depois do primeiro mod, deixando os outros dois
+        // desinstalados. $LASTEXITCODE reflete o código de saída real independente disso,
+        // então os checks abaixo continuam corretos sem precisar do 'Stop'.
 
         foreach (var (id, settings) in mods)
         {

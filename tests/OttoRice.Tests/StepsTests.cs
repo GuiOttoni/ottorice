@@ -321,6 +321,12 @@ public class ConfigureWindhawkModsStepTests
         Assert.DoesNotContain("mod install", script);
         Assert.Contains("mod settings set", script);
         Assert.Contains("theme=FrostyGlass", script);
+        // Regressão de incidente real (2026-08-24): com $ErrorActionPreference = 'Stop', o
+        // PowerShell trata a saída de progresso NORMAL do windhawk-cli em stderr (ex.:
+        // "Fetching X from repository...") como erro terminante e aborta o script inteiro
+        // no primeiro mod — mesmo quando o `mod install` por baixo funciona. Isso deixou
+        // dois mods completamente desinstalados numa instalação real.
+        Assert.DoesNotContain("ErrorActionPreference", script);
     }
 
     [Fact]
