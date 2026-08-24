@@ -1,5 +1,4 @@
 using System.IO;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
@@ -10,13 +9,12 @@ namespace OttoRice.Features.ThemeInstall.Steps;
 
 /// <summary>
 /// Executa as operações planejadas. Sem compensação própria: a restauração de
-/// arquivos, wallpaper e taskbar é responsabilidade do BackupStep.
+/// arquivos e wallpaper é responsabilidade do BackupStep.
 /// </summary>
 public sealed class ApplyStep(
     FileOverrideApplier overrideApplier,
     WindowsTerminalApplier terminalApplier,
     IWallpaperService wallpaper,
-    ITaskbarService taskbar,
     ILogger<ApplyStep>? logger = null) : IInstallStep
 {
     public string Name => "Aplicação";
@@ -44,14 +42,6 @@ public sealed class ApplyStep(
                     wallpaper.Set(op.SourcePath);
                     break;
             }
-        }
-
-        // GlazeWM substitui o papel da taskbar nativa: ocultá-la automaticamente evita
-        // que ela apareça por cima/ao lado do tiling do tema recém-instalado.
-        if (context.Operations.Any(op => op.Target.App == "glazewm"))
-        {
-            context.Report("Ocultando a barra de tarefas nativa (auto-hide)...");
-            taskbar.SetAutoHide(true);
         }
 
         logger?.LogInformation(

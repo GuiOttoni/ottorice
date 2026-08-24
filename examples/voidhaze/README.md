@@ -23,34 +23,23 @@ comandos. Os caminhos (`%USERPROFILE%\.glzr\glazewm\config.yaml`,
 `%USERPROFILE%\.config\yasb\`, o `settings.json` do Windows Terminal) vêm do registry
 interno do app, e o Windows Terminal recebe **merge** do esquema, não sobrescrita.
 
-Ao instalar um tema que gerencia o GlazeWM, o OttoRice também oculta automaticamente a
-barra de tarefas nativa do Windows (auto-hide via `SHAppBarMessage`, o mesmo mecanismo de
-Configurações > Personalização > Barra de tarefas) — restaurada ao desligar/desinstalar o
-tema. Não é um target do manifesto: é um efeito colateral de ter `glazewm` entre os apps
-geridos pelo tema, cuidado direto do `TaskbarService`/`ThemeToggleService`.
-
-> **Nota histórica:** uma primeira versão deste tema tentava restilizar (não esconder) a
-> taskbar via TranslucentTB (`CharlesMilette.TranslucentTB` no WinGet). Descartado após
-> dogfooding real: esse pacote é distribuído como MSIX, com config num
-> `ApplicationData` binário (`Settings\settings.dat`), não um `settings.json` ao lado de
-> um exe portable como a integração original assumia — ver doc OttoContext seção 10.
+> **Nota histórica:** o OttoRice já tentou controlar a taskbar nativa diretamente — primeiro
+> restilizando via TranslucentTB (`CharlesMilette.TranslucentTB` no WinGet; descartado
+> porque o pacote é MSIX, com config num `ApplicationData` binário, não um `settings.json`
+> ao lado de um exe portable como a integração assumia), depois escondendo via
+> `SHAppBarMessage` nativo. As duas abordagens foram **removidas por decisão do usuário**:
+> esse controle fica só com o Windhawk (ver seção abaixo), pra evitar atrito entre dois
+> mecanismos mexendo na mesma taskbar. Detalhe completo na doc OttoContext seção 10.
 
 ## "Existe um app que muda a taskbar inteira?"
 
-Duas respostas, dependendo do que se quer:
-
-- **Substituir de vez** (o que este tema faz): oculta a nativa e deixa o **YASB fazer o
-  papel dela**. Por isso o `taskbar` widget (`yasb.taskbar.TaskbarWidget`) foi adicionado —
-  ele lista os apps abertos direto na barra do YASB, com clique pra alternar/minimizar,
-  igual à taskbar nativa faria. Junto com `wifi`, `volume`, `battery` e `power_menu`, a
-  barra cobre tudo que a taskbar nativa cobria.
-- **Só restilizar a nativa sem trocar de WM** (fora do escopo do OttoRice hoje): a rota
-  usada pelo windots é o [Windhawk](https://windhawk.net/) com os mods *Taskbar Styler*,
-  *Start Menu Styler* e *Notification Center Styler* — reskin visual da taskbar/menu
-  Iniciar do Windows 11 sem GlazeWM/YASB. Diferente do TranslucentTB, não foi tentado
-  aqui porque é gerenciado por uma interface própria do Windhawk (mods habilitados
-  manualmente), não por um `settings.json`/config de arquivo — não dá pra automatizar via
-  `FileOverrideApplier` sem integrar a API do próprio Windhawk.
+Sim: o [Windhawk](https://windhawk.net/), com os mods *Taskbar Styler*, *Start Menu
+Styler* e *Notification Center Styler* — é a rota usada pelo windots, e a única que o
+OttoRice recomenda hoje para mexer na taskbar nativa. Não é instalado nem configurado por
+este tema: baixe manualmente em **https://windhawk.net/** e ative os mods pela própria
+interface do Windhawk (mods habilitados manualmente, não um `settings.json`/config de
+arquivo que o `FileOverrideApplier` pudesse copiar). Convive normalmente com o GlazeWM/YASB
+deste tema.
 
 ## Comparado ao windots
 

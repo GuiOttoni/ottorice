@@ -26,9 +26,6 @@ public sealed record ThemeState
 
     public string? GlazeWmConfigPath { get; init; }
 
-    /// <summary>Estado de auto-hide da taskbar nativa antes do tema ligar (null = não alterado/não capturado).</summary>
-    public bool? OriginalTaskbarAutoHide { get; init; }
-
     /// <summary>Ids do registry que este tema gerencia (glazewm, yasb, zebar...).</summary>
     public IReadOnlyList<string> ManagedApps { get; init; } = [];
 

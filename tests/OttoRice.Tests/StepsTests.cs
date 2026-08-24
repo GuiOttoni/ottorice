@@ -66,7 +66,7 @@ public class BackupStepTests : IDisposable
         wallpaper.GetCurrentPath().Returns(@"C:\old\wall.jpg");
 
         var store = new BackupSessionStore(Path.Combine(_dir, "backups"));
-        var step = new BackupStep(store, wallpaper, Substitute.For<ITaskbarService>());
+        var step = new BackupStep(store, wallpaper);
 
         var context = new InstallContext
         {

@@ -57,7 +57,6 @@ public partial class App : Application
             sp => new ExecutableResolver(logger: sp.GetService<ILogger<ExecutableResolver>>()));
         services.AddSingleton<IWinGetClient, WinGetClient>();
         services.AddSingleton<IWallpaperService, WindowsWallpaperService>();
-        services.AddSingleton<ITaskbarService, TaskbarService>();
         services.AddSingleton<IAppReloader, AppReloader>();
         services.AddSingleton<WindowsTerminalLocator>();
         services.AddSingleton<FileOverrideApplier>();
@@ -96,13 +95,11 @@ public partial class App : Application
             new BackupStep(
                 sp.GetRequiredService<BackupSessionStore>(),
                 sp.GetRequiredService<IWallpaperService>(),
-                sp.GetRequiredService<ITaskbarService>(),
                 sp.GetService<ILogger<BackupStep>>()),
             new ApplyStep(
                 sp.GetRequiredService<FileOverrideApplier>(),
                 sp.GetRequiredService<WindowsTerminalApplier>(),
                 sp.GetRequiredService<IWallpaperService>(),
-                sp.GetRequiredService<ITaskbarService>(),
                 sp.GetService<ILogger<ApplyStep>>()),
             new ReloadStep(sp.GetRequiredService<IAppReloader>(), sp.GetService<ILogger<ReloadStep>>()),
         ], sp.GetService<ILogger<InstallPipeline>>()));

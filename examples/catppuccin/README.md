@@ -5,12 +5,12 @@ Réplica, dentro do que o formato de manifesto do OttoRice permite, das features
 Windows Terminal, VS Code, Zed, Fastfetch, Flow Launcher e Oh My Posh, todos na paleta
 [Catppuccin Mocha](https://catppuccin.com/palette) oficial.
 
-> ⚠️ **Este tema não restiliza a taskbar/menu Iniciar/central de notificações nativos
-> por si só** — só oculta a taskbar (ver `TaskbarService`, item já coberto pelo OttoRice).
-> Pra esse reskin extra (o que o windots usa Windhawk pra fazer), baixe e instale o
-> **[Windhawk](https://windhawk.net/)** manualmente — não vem pelo OttoRice, é instalado
-> à parte — e ative por lá os mods *Taskbar Styler*, *Start Menu Styler* e *Notification
-> Center Styler*. Detalhes em "Windhawk — por que não dá pra automatizar" abaixo.
+> ⚠️ **O OttoRice não mexe na taskbar/menu Iniciar/central de notificações nativos** — nem
+> pra esconder, nem pra restilizar. Esse controle é só do **[Windhawk](https://windhawk.net/)**
+> (por decisão do usuário, pra evitar dois mecanismos disputando a mesma taskbar). Baixe e
+> instale manualmente em **https://windhawk.net/** — não vem pelo OttoRice — e ative por lá
+> os mods *Taskbar Styler*, *Start Menu Styler* e *Notification Center Styler*. Detalhes em
+> "Windhawk — por que não dá pra automatizar" abaixo.
 
 ## Conteúdo
 

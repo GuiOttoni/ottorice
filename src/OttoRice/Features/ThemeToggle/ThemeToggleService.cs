@@ -26,7 +26,6 @@ public sealed class ThemeToggleService(
     IWallpaperService wallpaper,
     ThemeStateStore stateStore,
     IExecutableResolver resolver,
-    ITaskbarService taskbar,
     ILogger<ThemeToggleService>? logger = null)
 {
     /// <summary>Únicos processos que este serviço pode encerrar por PID.</summary>
@@ -74,7 +73,6 @@ public sealed class ThemeToggleService(
         }
 
         RestoreOriginalWallpaper(state, progress);
-        RestoreOriginalTaskbar(state, progress);
 
         await stateStore.WriteAsync(state with { IsEnabled = false }, ct);
         logger?.LogInformation("Tema {ThemeId} desligado.", state.ActiveThemeId);
@@ -106,9 +104,6 @@ public sealed class ThemeToggleService(
                 ? $"start --config \"{state.GlazeWmConfigPath}\""
                 : "start";
             runner.StartDetached(glazewm, args);
-
-            progress?.Invoke("Ocultando a barra de tarefas nativa (auto-hide)...");
-            taskbar.SetAutoHide(true);
         }
 
         if (state.ManagedApps.Contains("yasb"))
@@ -129,23 +124,6 @@ public sealed class ThemeToggleService(
         await stateStore.WriteAsync(state with { IsEnabled = true }, ct);
         logger?.LogInformation("Tema {ThemeId} ligado.", state.ActiveThemeId);
         return Result.Ok();
-    }
-
-    private void RestoreOriginalTaskbar(ThemeState state, Action<string>? progress)
-    {
-        if (!state.ManagedApps.Contains("glazewm") || state.OriginalTaskbarAutoHide is not { } autoHide)
-            return;
-
-        progress?.Invoke("Restaurando a barra de tarefas...");
-        try
-        {
-            taskbar.SetAutoHide(autoHide);
-        }
-        catch (Exception ex)
-        {
-            logger?.LogWarning(ex, "Não foi possível restaurar o estado da taskbar.");
-            progress?.Invoke($"⚠ Não foi possível restaurar a barra de tarefas: {ex.Message}");
-        }
     }
 
     private void RestoreOriginalWallpaper(ThemeState state, Action<string>? progress)

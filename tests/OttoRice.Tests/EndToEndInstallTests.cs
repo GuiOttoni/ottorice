@@ -23,7 +23,6 @@ public class EndToEndInstallTests : IDisposable
     private readonly string _wtSettingsPath;
     private readonly IWinGetClient _winGet = Substitute.For<IWinGetClient>();
     private readonly IWallpaperService _wallpaper = Substitute.For<IWallpaperService>();
-    private readonly ITaskbarService _taskbar = Substitute.For<ITaskbarService>();
     private readonly IAppReloader _reloader = Substitute.For<IAppReloader>();
     private readonly BackupSessionStore _backups;
 
@@ -86,8 +85,8 @@ public class EndToEndInstallTests : IDisposable
             // Dependências antes do Planejamento: reflete a ordem real do App.axaml.cs.
             new DependencyStep(_winGet),
             new PlanStep(planner),
-            new BackupStep(_backups, _wallpaper, _taskbar),
-            new ApplyStep(new FileOverrideApplier(), new WindowsTerminalApplier(), _wallpaper, _taskbar),
+            new BackupStep(_backups, _wallpaper),
+            new ApplyStep(new FileOverrideApplier(), new WindowsTerminalApplier(), _wallpaper),
             failOnReload ? new FailingStep() : new ReloadStep(_reloader),
         ];
         return new InstallPipeline(steps);
@@ -128,13 +127,9 @@ public class EndToEndInstallTests : IDisposable
         }
     }
 
-    /// <summary>
-    /// Cobertura do segundo tema de exemplo: instala de ponta a ponta e prova que, por ter
-    /// glazewm entre os apps geridos, a taskbar nativa é ocultada automaticamente ao aplicar
-    /// (ver ApplyStep) — sem depender de nenhuma ferramenta externa de terceiros.
-    /// </summary>
+    /// <summary>Cobertura do segundo tema de exemplo: instala de ponta a ponta.</summary>
     [Fact]
-    public async Task Voidhaze_full_install_writes_every_target_and_hides_the_native_taskbar()
+    public async Task Voidhaze_full_install_writes_every_target()
     {
         var manifestJson = await File.ReadAllTextAsync(
             Path.Combine(VoidhazeThemeDir, ThemeFetcher.ManifestFileName));
@@ -148,7 +143,6 @@ public class EndToEndInstallTests : IDisposable
         Assert.True(File.Exists(Path.Combine(_fakeUserProfile, ".glzr", "glazewm", "config.yaml")));
         Assert.True(File.Exists(Path.Combine(_fakeUserProfile, ".config", "yasb", "config.yaml")));
         _wallpaper.Received(1).Set(Path.Combine(VoidhazeThemeDir, "assets", "wallpaper.png"));
-        _taskbar.Received(1).SetAutoHide(true);
     }
 
     private static string CatppuccinThemeDir
@@ -189,7 +183,6 @@ public class EndToEndInstallTests : IDisposable
         Assert.True(File.Exists(Path.Combine(
             _sandbox, "localappdata", "OttoRice", "ohmyposh", "catppuccin-mocha.omp.json")));
         _wallpaper.Received(1).Set(Path.Combine(CatppuccinThemeDir, "assets", "wallpaper.png"));
-        _taskbar.Received(1).SetAutoHide(true);
         Assert.Equal(
             ["glzr-io.glazewm", "AmN.yasb", "Microsoft.VisualStudioCode", "ZedIndustries.Zed",
              "Fastfetch-cli.Fastfetch", "Flow-Launcher.Flow-Launcher", "JanDeDobbeleer.OhMyPosh"],

@@ -32,7 +32,7 @@ public class UninstallServiceTests : IDisposable
 
         _uninstall = new UninstallService(
             _history, _backups, _stateStore,
-            new ThemeToggleService(_runner, _wallpaper, _stateStore, resolver, Substitute.For<ITaskbarService>()),
+            new ThemeToggleService(_runner, _wallpaper, _stateStore, resolver),
             _winGet);
     }
 

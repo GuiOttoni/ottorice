@@ -205,7 +205,6 @@ public partial class InstallViewModel(
             OriginalWallpaperCopy = await stateStore.PreserveWallpaperAsync(context.PreviousWallpaperPath),
             ThemeWallpaperPath = wallpaperOp?.SourcePath,
             GlazeWmConfigPath = glazeOp?.TargetPath,
-            OriginalTaskbarAutoHide = context.PreviousTaskbarAutoHide,
             ManagedApps = [.. context.Operations.Select(op => op.Target.App!).Distinct()],
         });
     }
