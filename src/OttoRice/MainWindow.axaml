@@ -36,7 +36,7 @@
 
             <!-- ══ Instalar tema ══════════════════════════════════════════ -->
             <TabItem Header="INSTALAR TEMA">
-                <Grid RowDefinitions="Auto,Auto,Auto,Auto,*" Margin="20,16" DataContext="{Binding Install}">
+                <Grid RowDefinitions="Auto,*" Margin="20,16" DataContext="{Binding Install}">
 
                     <StackPanel Grid.Row="0" Spacing="8">
                         <TextBlock Text="REPOSITÓRIO DO TEMA" Classes="eyebrow" />
@@ -51,99 +51,107 @@
                         </StackPanel>
                     </StackPanel>
 
-                    <!-- Preview / consentimento informado (RF-03) -->
-                    <Border Grid.Row="1" Classes="card" Margin="0,16,0,0" IsVisible="{Binding HasPreview}">
-                        <Grid ColumnDefinitions="*,Auto">
-                            <StackPanel Grid.Column="0" Spacing="10">
-                                <TextBlock Text="{Binding ThemeTitle}" Classes="h2" TextWrapping="Wrap" />
-                                <StackPanel Spacing="3">
-                                    <TextBlock Text="COMPONENTES (ligue/desligue o que aplicar)" Classes="eyebrow" />
-                                    <ItemsControl ItemsSource="{Binding Targets}">
-                                        <ItemsControl.ItemTemplate>
-                                            <DataTemplate x:DataType="install:TargetSelectionItem">
-                                                <CheckBox Content="{Binding Label}" IsChecked="{Binding IsSelected}" />
-                                            </DataTemplate>
-                                        </ItemsControl.ItemTemplate>
-                                    </ItemsControl>
-                                </StackPanel>
-                                <StackPanel Spacing="3">
-                                    <TextBlock Text="DEPENDÊNCIAS (WINGET)" Classes="eyebrow" />
-                                    <ItemsControl ItemsSource="{Binding Dependencies}">
-                                        <ItemsControl.ItemTemplate>
-                                            <DataTemplate>
-                                                <TextBlock Text="{Binding StringFormat='› {0}'}" Classes="dim" />
-                                            </DataTemplate>
-                                        </ItemsControl.ItemTemplate>
-                                    </ItemsControl>
-                                </StackPanel>
-                            </StackPanel>
-                            <Border Grid.Column="1" Margin="16,0,0,0"
-                                    BorderBrush="{DynamicResource BorderBrightBrush}" BorderThickness="1"
-                                    CornerRadius="3" Padding="1">
-                                <Image Source="{Binding PreviewImage}" MaxWidth="260" MaxHeight="150" Stretch="Uniform" />
-                            </Border>
-                        </Grid>
-                    </Border>
+                    <!-- Página inteira rola como uma unidade — antes só o console de log (fim
+                         desta lista) tinha ScrollViewer próprio, então numa janela pequena com
+                         um preview grande (muitos componentes/dependências) o botão INSTALAR e
+                         o log ficavam inacessíveis, sem nenhum jeito de rolar até eles. -->
+                    <ScrollViewer Grid.Row="1" Margin="0,16,0,0">
+                        <StackPanel Spacing="16">
 
-                    <StackPanel Grid.Row="2" Orientation="Horizontal" Spacing="8" Margin="0,16,0,0">
-                        <Button Content="INSTALAR TEMA" Classes="btn-primary" Command="{Binding InstallCommand}" />
-                        <Button Content="CANCELAR" Classes="btn-secondary" Command="{Binding CancelCommand}" />
-                        <ProgressBar IsIndeterminate="True" IsVisible="{Binding IsBusy}"
-                                     Width="180" Height="4" VerticalAlignment="Center" />
-                    </StackPanel>
-
-                    <!-- Visualização gráfica das etapas do pipeline (além do log escrito abaixo) -->
-                    <Border Grid.Row="3" Classes="card" Margin="0,16,0,0" IsVisible="{Binding HasPreview}">
-                        <ItemsControl ItemsSource="{Binding Steps}">
-                            <ItemsControl.ItemsPanel>
-                                <ItemsPanelTemplate>
-                                    <StackPanel Orientation="Horizontal" Spacing="4" />
-                                </ItemsPanelTemplate>
-                            </ItemsControl.ItemsPanel>
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate x:DataType="install:StepStatusItem">
-                                    <StackPanel Orientation="Horizontal" Spacing="4">
-                                        <StackPanel Spacing="6" Width="112" HorizontalAlignment="Center">
-                                            <Border Width="26" Height="26" CornerRadius="13"
-                                                    HorizontalAlignment="Center"
-                                                    Background="{DynamicResource BgSecondaryBrush}"
-                                                    BorderThickness="1.5"
-                                                    BorderBrush="{Binding State, Converter={x:Static conv:InstallStepStateToBrushConverter.Instance}}">
-                                                <TextBlock Text="{Binding State, Converter={x:Static conv:InstallStepStateToGlyphConverter.Instance}}"
-                                                           Foreground="{Binding State, Converter={x:Static conv:InstallStepStateToBrushConverter.Instance}}"
-                                                           FontSize="13" FontWeight="Bold"
-                                                           HorizontalAlignment="Center" VerticalAlignment="Center" />
-                                            </Border>
-                                            <TextBlock Text="{Binding Name}" Classes="muted" TextWrapping="Wrap"
-                                                       TextAlignment="Center" />
+                            <!-- Preview / consentimento informado (RF-03) -->
+                            <Border Classes="card" IsVisible="{Binding HasPreview}">
+                                <Grid ColumnDefinitions="*,Auto">
+                                    <StackPanel Grid.Column="0" Spacing="10">
+                                        <TextBlock Text="{Binding ThemeTitle}" Classes="h2" TextWrapping="Wrap" />
+                                        <StackPanel Spacing="3">
+                                            <TextBlock Text="COMPONENTES (ligue/desligue o que aplicar)" Classes="eyebrow" />
+                                            <ItemsControl ItemsSource="{Binding Targets}">
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate x:DataType="install:TargetSelectionItem">
+                                                        <CheckBox Content="{Binding Label}" IsChecked="{Binding IsSelected}" />
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
                                         </StackPanel>
-                                        <Border Width="20" Height="1.5" VerticalAlignment="Center" Margin="0,0,0,20"
-                                                Background="{DynamicResource BorderBrush2}" />
+                                        <StackPanel Spacing="3">
+                                            <TextBlock Text="DEPENDÊNCIAS (WINGET)" Classes="eyebrow" />
+                                            <ItemsControl ItemsSource="{Binding Dependencies}">
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <TextBlock Text="{Binding StringFormat='› {0}'}" Classes="dim" />
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                        </StackPanel>
                                     </StackPanel>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
-                    </Border>
+                                    <Border Grid.Column="1" Margin="16,0,0,0"
+                                            BorderBrush="{DynamicResource BorderBrightBrush}" BorderThickness="1"
+                                            CornerRadius="3" Padding="1">
+                                        <Image Source="{Binding PreviewImage}" MaxWidth="260" MaxHeight="150" Stretch="Uniform" />
+                                    </Border>
+                                </Grid>
+                            </Border>
 
-                    <Border Grid.Row="4" Classes="console" Margin="0,16,0,0">
-                        <ScrollViewer>
-                            <ItemsControl ItemsSource="{Binding Log}" Margin="12">
-                                <ItemsControl.ItemTemplate>
-                                    <DataTemplate>
-                                        <TextBlock Text="{Binding}" Classes="mono-log" TextWrapping="Wrap" />
-                                    </DataTemplate>
-                                </ItemsControl.ItemTemplate>
-                            </ItemsControl>
-                        </ScrollViewer>
-                    </Border>
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <Button Content="INSTALAR TEMA" Classes="btn-primary" Command="{Binding InstallCommand}" />
+                                <Button Content="CANCELAR" Classes="btn-secondary" Command="{Binding CancelCommand}" />
+                                <ProgressBar IsIndeterminate="True" IsVisible="{Binding IsBusy}"
+                                             Width="180" Height="4" VerticalAlignment="Center" />
+                            </StackPanel>
+
+                            <!-- Visualização gráfica das etapas do pipeline (além do log escrito abaixo) -->
+                            <Border Classes="card" IsVisible="{Binding HasPreview}">
+                                <ItemsControl ItemsSource="{Binding Steps}">
+                                    <ItemsControl.ItemsPanel>
+                                        <ItemsPanelTemplate>
+                                            <StackPanel Orientation="Horizontal" Spacing="4" />
+                                        </ItemsPanelTemplate>
+                                    </ItemsControl.ItemsPanel>
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate x:DataType="install:StepStatusItem">
+                                            <StackPanel Orientation="Horizontal" Spacing="4">
+                                                <StackPanel Spacing="6" Width="112" HorizontalAlignment="Center">
+                                                    <Border Width="26" Height="26" CornerRadius="13"
+                                                            HorizontalAlignment="Center"
+                                                            Background="{DynamicResource BgSecondaryBrush}"
+                                                            BorderThickness="1.5"
+                                                            BorderBrush="{Binding State, Converter={x:Static conv:InstallStepStateToBrushConverter.Instance}}">
+                                                        <TextBlock Text="{Binding State, Converter={x:Static conv:InstallStepStateToGlyphConverter.Instance}}"
+                                                                   Foreground="{Binding State, Converter={x:Static conv:InstallStepStateToBrushConverter.Instance}}"
+                                                                   FontSize="13" FontWeight="Bold"
+                                                                   HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                                    </Border>
+                                                    <TextBlock Text="{Binding Name}" Classes="muted" TextWrapping="Wrap"
+                                                               TextAlignment="Center" />
+                                                </StackPanel>
+                                                <Border Width="20" Height="1.5" VerticalAlignment="Center" Margin="0,0,0,20"
+                                                        Background="{DynamicResource BorderBrush2}" />
+                                            </StackPanel>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </Border>
+
+                            <Border Classes="console" MinHeight="120">
+                                <ItemsControl ItemsSource="{Binding Log}" Margin="12">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <TextBlock Text="{Binding}" Classes="mono-log" TextWrapping="Wrap" />
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </Border>
+                        </StackPanel>
+                    </ScrollViewer>
                 </Grid>
             </TabItem>
 
             <!-- ══ Tema ativo ═════════════════════════════════════════════ -->
             <TabItem Header="TEMA ATIVO">
-                <Grid RowDefinitions="Auto,Auto,Auto,*" Margin="20,16" DataContext="{Binding Control}">
+                <ScrollViewer Margin="20,16" DataContext="{Binding Control}">
+                    <StackPanel Spacing="16">
 
-                    <Border Grid.Row="0" Classes="card">
+                    <Border Classes="card">
                         <StackPanel Orientation="Horizontal" Spacing="16">
                             <StackPanel Spacing="4" VerticalAlignment="Center">
                                 <TextBlock Text="TEMA APLICADO" Classes="eyebrow" />
@@ -153,7 +161,7 @@
                         </StackPanel>
                     </Border>
 
-                    <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="8" Margin="0,16,0,0">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
                         <Button Content="LIGAR TEMA" Classes="btn-primary" Command="{Binding TurnOnCommand}" />
                         <Button Content="DESLIGAR TEMA" Classes="btn-secondary" Command="{Binding TurnOffCommand}" />
                         <Button Content="PAUSAR/RETOMAR TILING" Classes="btn-secondary" Command="{Binding TogglePauseCommand}" />
@@ -164,7 +172,7 @@
                                      Width="140" Height="4" VerticalAlignment="Center" />
                     </StackPanel>
 
-                    <Border Grid.Row="2" Classes="card" Margin="0,16,0,0" IsVisible="{Binding HasActiveTheme}">
+                    <Border Classes="card" IsVisible="{Binding HasActiveTheme}">
                         <StackPanel Spacing="8">
                             <TextBlock Text="DESINSTALAR ESTE TEMA" Classes="eyebrow" />
                             <TextBlock Classes="muted" TextWrapping="Wrap"
@@ -188,23 +196,22 @@
                         </StackPanel>
                     </Border>
 
-                    <Border Grid.Row="3" Classes="console" Margin="0,16,0,0">
-                        <ScrollViewer>
-                            <ItemsControl ItemsSource="{Binding Log}" Margin="12">
-                                <ItemsControl.ItemTemplate>
-                                    <DataTemplate>
-                                        <TextBlock Text="{Binding}" Classes="mono-log" TextWrapping="Wrap" />
-                                    </DataTemplate>
-                                </ItemsControl.ItemTemplate>
-                            </ItemsControl>
-                        </ScrollViewer>
+                    <Border Classes="console" MinHeight="120">
+                        <ItemsControl ItemsSource="{Binding Log}" Margin="12">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <TextBlock Text="{Binding}" Classes="mono-log" TextWrapping="Wrap" />
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
                     </Border>
-                </Grid>
+                    </StackPanel>
+                </ScrollViewer>
             </TabItem>
 
             <!-- ══ Temas instalados ═══════════════════════════════════════ -->
             <TabItem Header="TEMAS INSTALADOS">
-                <Grid x:Name="InstalledThemesRoot" RowDefinitions="Auto,Auto,*" Margin="20,16" DataContext="{Binding InstalledThemes}">
+                <Grid x:Name="InstalledThemesRoot" RowDefinitions="Auto,*" Margin="20,16" DataContext="{Binding InstalledThemes}">
 
                     <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="8">
                         <TextBlock Text="TODOS OS TEMAS INSTALADOS" Classes="eyebrow" VerticalAlignment="Center" />
@@ -213,7 +220,11 @@
                                      Width="140" Height="4" VerticalAlignment="Center" />
                     </StackPanel>
 
-                    <ItemsControl Grid.Row="1" ItemsSource="{Binding Themes}" Margin="0,16,0,0">
+                    <!-- Lista sem limite de tamanho — sem isto, muitos temas instalados (ou
+                         checklists de "reaplicar" expandidos) ultrapassavam a janela sem
+                         nenhum jeito de rolar até os de baixo. -->
+                    <ScrollViewer Grid.Row="1" Margin="0,16,0,0">
+                    <ItemsControl ItemsSource="{Binding Themes}">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate x:DataType="toggle:InstalledThemeItem">
                                 <Border Classes="card" Margin="0,0,0,10">
@@ -268,6 +279,7 @@
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
+                    </ScrollViewer>
                 </Grid>
             </TabItem>
 
