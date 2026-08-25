@@ -235,5 +235,146 @@ public class ReapplyThemeServiceTests : IDisposable
         Assert.False(installed.Themes["inativo"].IsEnabled);
     }
 
+    // ── paletas (seção 13 da doc "OttoRice") ───────────────────────────────
+
+    private static RiceManifest ManifestWithPalettes() => new()
+    {
+        ThemeId = "catppuccin",
+        Name = "Catppuccin",
+        Targets = [new RiceTarget { App = "glazewm", Action = "override", Source = "configs/glazewm/config.yaml" }],
+        Palettes =
+        [
+            new RicePalette { Id = "latte", Name = "Catppuccin Latte", SourceOverride = "palettes/latte" },
+            new RicePalette { Id = "frappe", Name = "Catppuccin Frappé", SourceOverride = "palettes/frappe" },
+        ],
+    };
+
+    [Fact]
+    public async Task FetchPalettesAsync_returns_the_manifest_palettes()
+    {
+        await _store.UpsertThemeAsync(new ThemeState
+        {
+            ThemeId = "catppuccin", ThemeName = "Catppuccin", IsEnabled = true, SourceUrl = "https://github.com/o/r",
+        }, makeActive: true);
+        _fetcher.FetchAsync("https://github.com/o/r", Arg.Any<CancellationToken>())
+                .Returns(Result<FetchedTheme>.Ok(new FetchedTheme("dir", ManifestWithPalettes())));
+        var service = new ReapplyThemeService(_fetcher, new InstallPipeline([]), _store);
+
+        var result = await service.FetchPalettesAsync("catppuccin");
+
+        Assert.True(result.IsSuccess, result.Error);
+        Assert.Equal(2, result.Value!.Count);
+        Assert.Contains(result.Value, p => p.Id == "latte");
+    }
+
+    [Fact]
+    public async Task FetchPalettesAsync_on_theme_without_palettes_returns_empty_not_a_failure()
+    {
+        await _store.UpsertThemeAsync(new ThemeState
+        {
+            ThemeId = "t", ThemeName = "T", IsEnabled = true, SourceUrl = "https://github.com/o/r",
+        }, makeActive: true);
+        _fetcher.FetchAsync("https://github.com/o/r", Arg.Any<CancellationToken>())
+                .Returns(Result<FetchedTheme>.Ok(Fetched()));
+        var service = new ReapplyThemeService(_fetcher, new InstallPipeline([]), _store);
+
+        var result = await service.FetchPalettesAsync("t");
+
+        Assert.True(result.IsSuccess, result.Error);
+        Assert.Empty(result.Value!);
+    }
+
+    [Fact]
+    public async Task ApplyPaletteAsync_fails_when_the_palette_id_does_not_exist_in_the_manifest()
+    {
+        await _store.UpsertThemeAsync(new ThemeState
+        {
+            ThemeId = "catppuccin", ThemeName = "Catppuccin", IsEnabled = true, SourceUrl = "https://github.com/o/r",
+        }, makeActive: true);
+        _fetcher.FetchAsync("https://github.com/o/r", Arg.Any<CancellationToken>())
+                .Returns(Result<FetchedTheme>.Ok(new FetchedTheme("dir", ManifestWithPalettes())));
+        var service = new ReapplyThemeService(_fetcher, new InstallPipeline([]), _store);
+
+        var result = await service.ApplyPaletteAsync("catppuccin", "nao-existe");
+
+        Assert.False(result.IsSuccess);
+        Assert.Contains("não existe mais", result.Error);
+    }
+
+    [Fact]
+    public async Task ApplyPaletteAsync_sets_the_palette_id_on_the_pipeline_context_and_persists_it()
+    {
+        await _store.UpsertThemeAsync(new ThemeState
+        {
+            ThemeId = "catppuccin", ThemeName = "Catppuccin", IsEnabled = true, SourceUrl = "https://github.com/o/r",
+        }, makeActive: true);
+        _fetcher.FetchAsync("https://github.com/o/r", Arg.Any<CancellationToken>())
+                .Returns(Result<FetchedTheme>.Ok(new FetchedTheme("dir", ManifestWithPalettes())));
+
+        InstallContext? captured = null;
+        var pipeline = new InstallPipeline([new CapturingStep(ctx => captured = ctx)]);
+        var service = new ReapplyThemeService(_fetcher, pipeline, _store);
+
+        var result = await service.ApplyPaletteAsync("catppuccin", "latte");
+
+        Assert.True(result.IsSuccess, result.Error);
+        Assert.Equal("latte", captured!.PaletteId);
+        // Troca de paleta sempre reaplica todos os targets — nunca herda um toggle antigo.
+        Assert.Null(captured.SelectedTargetIndexes);
+
+        var saved = (await _store.ReadAsync()).Themes["catppuccin"];
+        Assert.Equal("latte", saved.ActivePaletteId);
+    }
+
+    [Fact]
+    public async Task ApplyPaletteAsync_with_null_id_switches_back_to_the_default_palette()
+    {
+        await _store.UpsertThemeAsync(new ThemeState
+        {
+            ThemeId = "catppuccin", ThemeName = "Catppuccin", IsEnabled = true,
+            SourceUrl = "https://github.com/o/r", ActivePaletteId = "latte",
+        }, makeActive: true);
+        _fetcher.FetchAsync("https://github.com/o/r", Arg.Any<CancellationToken>())
+                .Returns(Result<FetchedTheme>.Ok(new FetchedTheme("dir", ManifestWithPalettes())));
+
+        InstallContext? captured = null;
+        var pipeline = new InstallPipeline([new CapturingStep(ctx => captured = ctx)]);
+        var service = new ReapplyThemeService(_fetcher, pipeline, _store);
+
+        var result = await service.ApplyPaletteAsync("catppuccin", null);
+
+        Assert.True(result.IsSuccess, result.Error);
+        Assert.Null(captured!.PaletteId);
+
+        var saved = (await _store.ReadAsync()).Themes["catppuccin"];
+        Assert.Null(saved.ActivePaletteId);
+    }
+
+    /// <summary>Reaplicação "normal" (botão REAPLICAR) não reseta a paleta ativa — ela flui
+    /// pro InstallContext pra o PlanStep continuar resolvendo a partir do diretório certo.</summary>
+    [Fact]
+    public async Task ReapplyAsync_preserves_the_currently_active_palette()
+    {
+        await _store.UpsertThemeAsync(new ThemeState
+        {
+            ThemeId = "catppuccin", ThemeName = "Catppuccin", IsEnabled = true,
+            SourceUrl = "https://github.com/o/r", ActivePaletteId = "frappe",
+        }, makeActive: true);
+        _fetcher.FetchAsync("https://github.com/o/r", Arg.Any<CancellationToken>())
+                .Returns(Result<FetchedTheme>.Ok(new FetchedTheme("dir", ManifestWithPalettes())));
+
+        InstallContext? captured = null;
+        var pipeline = new InstallPipeline([new CapturingStep(ctx => captured = ctx)]);
+        var service = new ReapplyThemeService(_fetcher, pipeline, _store);
+
+        var result = await service.ReapplyAsync("catppuccin");
+
+        Assert.True(result.IsSuccess, result.Error);
+        Assert.Equal("frappe", captured!.PaletteId);
+
+        var saved = (await _store.ReadAsync()).Themes["catppuccin"];
+        Assert.Equal("frappe", saved.ActivePaletteId); // continua igual, não foi resetada
+    }
+
     public void Dispose() => Directory.Delete(_dir, recursive: true);
 }

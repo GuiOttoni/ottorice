@@ -75,5 +75,10 @@
       "action": "configure_mod",
       "source": "configs/windhawk/notification-center-styler.yaml"
     }
+  ],
+  "palettes": [
+    { "id": "latte", "name": "Catppuccin Latte", "sourceOverride": "palettes/latte" },
+    { "id": "frappe", "name": "Catppuccin Frappé", "sourceOverride": "palettes/frappe" },
+    { "id": "macchiato", "name": "Catppuccin Macchiato", "sourceOverride": "palettes/macchiato" }
   ]
 }

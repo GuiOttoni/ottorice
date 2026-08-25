@@ -13,6 +13,27 @@ public sealed record RiceManifest
     [JsonPropertyName("preview")] public string? Preview { get; init; }
     [JsonPropertyName("dependencies")] public List<RiceDependency> Dependencies { get; init; } = [];
     [JsonPropertyName("targets")] public List<RiceTarget> Targets { get; init; } = [];
+
+    /// <summary>
+    /// Paletas de cores alternativas (seção 13 da doc "OttoRice") — cada uma é um diretório
+    /// alternativo completo que espelha a mesma estrutura relativa de <c>configs/</c> pros
+    /// targets que ela recolore. Targets sem override na paleta escolhida caem no
+    /// <c>configs/</c> padrão (ver <see cref="OttoRice.Features.ThemeInstall.TargetPlanner"/>).
+    /// Vazio = tema sem paletas alternativas (nenhum seletor exibido na UI).
+    /// </summary>
+    [JsonPropertyName("palettes")] public List<RicePalette> Palettes { get; init; } = [];
+}
+
+/// <summary>
+/// Uma paleta de cores alternativa. <see cref="SourceOverride"/> é um diretório relativo
+/// dentro do repo do tema (mesma regra de segurança de <see cref="RiceTarget.Source"/> — sem
+/// path traversal, validado em <c>ManifestValidator</c>) cuja estrutura espelha <c>configs/</c>.
+/// </summary>
+public sealed record RicePalette
+{
+    [JsonPropertyName("id")] public string? Id { get; init; }
+    [JsonPropertyName("name")] public string? Name { get; init; }
+    [JsonPropertyName("sourceOverride")] public string? SourceOverride { get; init; }
 }
 
 public sealed record RiceDependency

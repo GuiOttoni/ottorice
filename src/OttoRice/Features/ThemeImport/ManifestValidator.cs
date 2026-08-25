@@ -28,7 +28,13 @@ public static partial class ManifestValidator
     [GeneratedRegex(@"^[A-Za-z0-9_.\[\]-]+$")]
     private static partial Regex WindhawkSettingsKeyPattern();
 
-    public static IReadOnlyList<string> Validate(RiceManifest manifest)
+    /// <param name="manifest">Manifesto a validar.</param>
+    /// <param name="themeRoot">
+    /// Raiz do tema em disco, se já conhecida — habilita a checagem de existência do diretório
+    /// de <see cref="RicePalette.SourceOverride"/>. <c>null</c> (padrão) pula essa checagem
+    /// específica (usado onde a raiz ainda não é conhecida, como no editor de manifesto).
+    /// </param>
+    public static IReadOnlyList<string> Validate(RiceManifest manifest, string? themeRoot = null)
     {
         var errors = new List<string>();
 
@@ -96,10 +102,41 @@ public static partial class ManifestValidator
             }
         }
 
+        var paletteIds = new HashSet<string>();
+        for (var i = 0; i < manifest.Palettes.Count; i++)
+        {
+            var palette = manifest.Palettes[i];
+            var label = $"palettes[{i}]";
+
+            if (string.IsNullOrWhiteSpace(palette.Id) || !ThemeIdPattern().IsMatch(palette.Id))
+            {
+                errors.Add($"{label}: id '{palette.Id}' inválido (obrigatório, kebab-case).");
+            }
+            else if (!paletteIds.Add(palette.Id))
+            {
+                errors.Add($"{label}: id '{palette.Id}' duplicado.");
+            }
+
+            if (string.IsNullOrWhiteSpace(palette.Name))
+                errors.Add($"{label}: name é obrigatório.");
+
+            if (!IsSafeRelativeSource(palette.SourceOverride))
+            {
+                errors.Add($"{label}: sourceOverride '{palette.SourceOverride}' deve ser um caminho relativo dentro do repo do tema.");
+            }
+            else if (themeRoot is not null)
+            {
+                var fullThemeRoot = Path.GetFullPath(themeRoot);
+                var dir = Path.GetFullPath(Path.Combine(fullThemeRoot, palette.SourceOverride!));
+                if (!dir.StartsWith(fullThemeRoot, StringComparison.OrdinalIgnoreCase) || !Directory.Exists(dir))
+                    errors.Add($"{label}: sourceOverride '{palette.SourceOverride}' não existe no tema.");
+            }
+        }
+
         return errors;
     }
 
-    public static Result<RiceManifest> Parse(string json, ILogger? logger = null)
+    public static Result<RiceManifest> Parse(string json, ILogger? logger = null, string? themeRoot = null)
     {
         RiceManifest? manifest;
         try
@@ -119,7 +156,7 @@ public static partial class ManifestValidator
         if (manifest is null)
             return Result<RiceManifest>.Fail("Manifesto vazio.");
 
-        var errors = Validate(manifest);
+        var errors = Validate(manifest, themeRoot);
         if (errors.Count > 0)
         {
             logger?.LogWarning(

@@ -239,5 +239,68 @@ public class TargetPlannerTests : IDisposable
         Assert.Empty(plan.Value!);
     }
 
+    // ── paletas (seção 13 da doc "OttoRice") ───────────────────────────────
+
+    [Fact]
+    public void Palette_override_is_used_when_the_file_exists_in_the_palette_directory()
+    {
+        WriteThemeFile("configs/glazewm/config.yaml", "mocha");
+        WriteThemeFile("palettes/latte/configs/glazewm/config.yaml", "latte");
+        var manifest = Manifest(new RiceTarget { App = "glazewm", Action = "override", Source = "configs/glazewm/config.yaml" });
+
+        var plan = _planner.Build(manifest, _themeDir, paletteSourceOverride: "palettes/latte");
+
+        Assert.True(plan.IsSuccess, plan.Error);
+        var op = Assert.Single(plan.Value!);
+        Assert.Equal(Path.Combine(_themeDir, "palettes", "latte", "configs", "glazewm", "config.yaml"), op.SourcePath);
+        Assert.Equal("latte", File.ReadAllText(op.SourcePath));
+    }
+
+    [Fact]
+    public void Palette_override_falls_back_to_default_source_when_target_not_recolored_by_palette()
+    {
+        // O target "wallpaper" não existe em palettes/latte — cai no configs/ padrão.
+        WriteThemeFile("assets/wall.png", "default-wallpaper");
+        Directory.CreateDirectory(Path.Combine(_themeDir, "palettes", "latte", "configs"));
+        var manifest = Manifest(new RiceTarget { App = "wallpaper", Action = "set", Source = "assets/wall.png" });
+
+        var plan = _planner.Build(manifest, _themeDir, paletteSourceOverride: "palettes/latte");
+
+        Assert.True(plan.IsSuccess, plan.Error);
+        var op = Assert.Single(plan.Value!);
+        Assert.Equal(Path.Combine(_themeDir, "assets", "wall.png"), op.SourcePath);
+    }
+
+    [Fact]
+    public void Directory_override_from_palette_uses_only_the_palette_directory_contents()
+    {
+        // Override de pasta troca a pasta inteira — o teste de config.yaml/styles.css do
+        // catppuccin cobre esse caso real (ambos os arquivos precisam existir na paleta).
+        WriteThemeFile("configs/yasb/config.yaml", "mocha-config");
+        WriteThemeFile("configs/yasb/styles.css", "mocha-css");
+        WriteThemeFile("palettes/latte/configs/yasb/config.yaml", "latte-config");
+        WriteThemeFile("palettes/latte/configs/yasb/styles.css", "latte-css");
+        var manifest = Manifest(new RiceTarget { App = "yasb", Action = "override", Source = "configs/yasb" });
+
+        var plan = _planner.Build(manifest, _themeDir, paletteSourceOverride: "palettes/latte");
+
+        Assert.True(plan.IsSuccess, plan.Error);
+        Assert.Equal(2, plan.Value!.Count);
+        Assert.All(plan.Value!, op => Assert.Contains("palettes", op.SourcePath));
+    }
+
+    [Fact]
+    public void Null_palette_override_always_uses_default_source()
+    {
+        WriteThemeFile("configs/glazewm/config.yaml", "mocha");
+        WriteThemeFile("palettes/latte/configs/glazewm/config.yaml", "latte");
+        var manifest = Manifest(new RiceTarget { App = "glazewm", Action = "override", Source = "configs/glazewm/config.yaml" });
+
+        var plan = _planner.Build(manifest, _themeDir, paletteSourceOverride: null);
+
+        Assert.True(plan.IsSuccess, plan.Error);
+        Assert.Equal("mocha", File.ReadAllText(Assert.Single(plan.Value!).SourcePath));
+    }
+
     public void Dispose() => Directory.Delete(_dir, recursive: true);
 }

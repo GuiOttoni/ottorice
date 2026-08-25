@@ -237,6 +237,7 @@
                                                 </StackPanel>
                                                 <TextBlock Classes="muted"
                                                            Text="{Binding InstalledAt, StringFormat='instalado em {0:dd/MM/yyyy HH:mm}'}" />
+                                                <TextBlock Classes="muted" Text="{Binding PaletteLabel}" />
                                             </StackPanel>
                                             <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
                                                 <Button Content="ATIVAR" Classes="btn-primary"
@@ -251,6 +252,20 @@
                                                 <Button Content="CANCELAR" Classes="btn-secondary"
                                                         IsVisible="{Binding IsSelectingTargets}"
                                                         Command="{Binding #InstalledThemesRoot.DataContext.CancelReapplySelectionCommand}"
+                                                        CommandParameter="{Binding}" />
+                                                <Button Classes="btn-secondary"
+                                                        Content="{Binding PaletteButtonLabel}"
+                                                        Command="{Binding #InstalledThemesRoot.DataContext.SelectPaletteCommand}"
+                                                        CommandParameter="{Binding}"
+                                                        IsVisible="{Binding !IsSelectingPalette}"
+                                                        ToolTip.Tip="Trocar a paleta de cores deste tema (se ele tiver alternativas)." />
+                                                <Button Content="APLICAR" Classes="btn-primary"
+                                                        IsVisible="{Binding IsSelectingPalette}"
+                                                        Command="{Binding #InstalledThemesRoot.DataContext.ApplyPaletteCommand}"
+                                                        CommandParameter="{Binding}" />
+                                                <Button Content="CANCELAR" Classes="btn-secondary"
+                                                        IsVisible="{Binding IsSelectingPalette}"
+                                                        Command="{Binding #InstalledThemesRoot.DataContext.CancelPaletteSelectionCommand}"
                                                         CommandParameter="{Binding}" />
                                                 <Button Content="{Binding UninstallButtonLabel}" Classes="btn-gold"
                                                         Command="{Binding #InstalledThemesRoot.DataContext.UninstallCommand}"
@@ -273,6 +288,15 @@
                                                     </DataTemplate>
                                                 </ItemsControl.ItemTemplate>
                                             </ItemsControl>
+                                        </StackPanel>
+
+                                        <!-- Seletor de paleta (seção 13 da doc "OttoRice"): aparece só depois do 1º clique em PALETA -->
+                                        <StackPanel Spacing="3" IsVisible="{Binding IsSelectingPalette}">
+                                            <TextBlock Text="PALETA DE CORES" Classes="eyebrow" />
+                                            <ComboBox ItemsSource="{Binding Palettes}"
+                                                      SelectedItem="{Binding SelectedPalette}"
+                                                      DisplayMemberBinding="{Binding Name}"
+                                                      MinWidth="220" HorizontalAlignment="Left" />
                                         </StackPanel>
                                     </StackPanel>
                                 </Border>

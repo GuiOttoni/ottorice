@@ -128,7 +128,7 @@ public sealed class ThemeFetcher(
                 return Result<FetchedTheme>.Fail(
                     $"'{ManifestFileName}' não encontrado em {(repoRef.SubPath.Length > 0 ? repoRef.SubPath : "na raiz do repo")}.");
 
-            var manifest = ManifestValidator.Parse(await File.ReadAllTextAsync(manifestPath, ct), logger);
+            var manifest = ManifestValidator.Parse(await File.ReadAllTextAsync(manifestPath, ct), logger, themeDir);
             if (!manifest.IsSuccess)
                 return Result<FetchedTheme>.Fail(manifest.Error!);
 
@@ -152,12 +152,12 @@ public sealed class ThemeFetcher(
         if (!manifestPath.EndsWith(".json", StringComparison.OrdinalIgnoreCase))
             return Result<FetchedTheme>.Fail("Um arquivo de tema local precisa ser um manifesto .json.");
 
-        var manifest = ManifestValidator.Parse(await File.ReadAllTextAsync(manifestPath, ct), logger);
-        if (!manifest.IsSuccess)
-            return Result<FetchedTheme>.Fail(manifest.Error!);
-
         var themeDir = Path.GetDirectoryName(Path.GetFullPath(manifestPath))
             ?? throw new InvalidOperationException($"Não foi possível determinar a pasta de '{manifestPath}'.");
+
+        var manifest = ManifestValidator.Parse(await File.ReadAllTextAsync(manifestPath, ct), logger, themeDir);
+        if (!manifest.IsSuccess)
+            return Result<FetchedTheme>.Fail(manifest.Error!);
 
         return Result<FetchedTheme>.Ok(new FetchedTheme(themeDir, manifest.Value!));
     }
@@ -168,9 +168,10 @@ public sealed class ThemeFetcher(
         if (!File.Exists(manifestPath))
             return Result<FetchedTheme>.Fail($"'{ManifestFileName}' não encontrado em {themeDir}.");
 
-        var manifest = ManifestValidator.Parse(await File.ReadAllTextAsync(manifestPath, ct), logger);
+        var fullThemeDir = Path.GetFullPath(themeDir);
+        var manifest = ManifestValidator.Parse(await File.ReadAllTextAsync(manifestPath, ct), logger, fullThemeDir);
         return manifest.IsSuccess
-            ? Result<FetchedTheme>.Ok(new FetchedTheme(Path.GetFullPath(themeDir), manifest.Value!))
+            ? Result<FetchedTheme>.Ok(new FetchedTheme(fullThemeDir, manifest.Value!))
             : Result<FetchedTheme>.Fail(manifest.Error!);
     }
 

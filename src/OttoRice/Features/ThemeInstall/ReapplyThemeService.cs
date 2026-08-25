@@ -60,6 +60,28 @@ public sealed class ReapplyThemeService(
         return Result<IReadOnlyList<RiceTarget>>.Ok(fetched.Value!.Manifest.Targets);
     }
 
+    /// <summary>
+    /// Busca de novo as paletas de cores alternativas declaradas pelo tema (seção 13 da doc
+    /// "OttoRice") — usado para popular o seletor de paleta na UI. Lista vazia = tema sem
+    /// paletas alternativas (não é erro).
+    /// </summary>
+    public async Task<Result<IReadOnlyList<RicePalette>>> FetchPalettesAsync(
+        string themeId, CancellationToken ct = default)
+    {
+        var installed = await stateStore.ReadAsync(ct);
+        if (!installed.Themes.TryGetValue(themeId, out var state))
+            return Result<IReadOnlyList<RicePalette>>.Fail($"Tema '{themeId}' não está instalado.");
+        if (string.IsNullOrEmpty(state.SourceUrl))
+            return Result<IReadOnlyList<RicePalette>>.Fail(
+                "Este tema não tem uma origem salva (foi instalado antes desta versão do OttoRice) — reinstale pela aba Instalar.");
+
+        var fetched = await fetcher.FetchAsync(state.SourceUrl, ct);
+        if (!fetched.IsSuccess)
+            return Result<IReadOnlyList<RicePalette>>.Fail($"Falha ao baixar o tema: {fetched.Error}");
+
+        return Result<IReadOnlyList<RicePalette>>.Ok(fetched.Value!.Manifest.Palettes);
+    }
+
     /// <summary>Reaplica o tema indicado (qualquer tema instalado, não só o ativo — seção 12.3
     /// do plano de evolução generalizou este método para N temas).</summary>
     /// <param name="selectedTargetIndexes">
@@ -91,17 +113,77 @@ public sealed class ReapplyThemeService(
             ThemeDirectory = fetched.Value.ThemeDirectory,
             Progress = progress,
             SelectedTargetIndexes = selectedTargetIndexes,
+            // Reaplicação "normal" (botão REAPLICAR) preserva a paleta ativa no momento — não
+            // reseta silenciosamente pra padrão. Trocar de paleta de propósito é ApplyPaletteAsync.
+            PaletteId = state.ActivePaletteId,
         };
 
         var result = await pipeline.RunAsync(context, ct);
         if (!result.IsSuccess)
             return result;
 
-        // Atualiza os caminhos derivados (podem ter mudado se o conteúdo do tema mudou),
-        // preservando o que só a instalação/backup original sabe (wallpaper anterior etc.).
+        await PersistDerivedStateAsync(state, context, ct);
+
+        logger?.LogInformation("Tema {ThemeId} reaplicado.", themeId);
+        return Result.Ok();
+    }
+
+    /// <summary>
+    /// Troca a paleta de cores ativa de um tema já instalado (seção 13 da doc "OttoRice") —
+    /// reaproveita o mesmo pipeline reduzido da reaplicação, só apontando o
+    /// <see cref="TargetPlanner"/> pra resolver a partir do diretório da paleta em vez do
+    /// padrão. Reaplica sempre todos os targets do tema (sem toggle por componente): trocar de
+    /// paleta precisa reescrever/restaurar qualquer arquivo que a paleta anterior tenha tocado,
+    /// não só um subconjunto.
+    /// </summary>
+    /// <param name="paletteId">
+    /// Id de uma das <see cref="RiceManifest.Palettes"/> do tema, ou <c>null</c> para voltar à
+    /// paleta padrão (<c>configs/</c>, sem override).
+    /// </param>
+    public async Task<Result> ApplyPaletteAsync(
+        string themeId, string? paletteId, Action<string>? progress = null, CancellationToken ct = default)
+    {
+        var installed = await stateStore.ReadAsync(ct);
+        if (!installed.Themes.TryGetValue(themeId, out var state))
+            return Result.Fail($"Tema '{themeId}' não está instalado.");
+        if (string.IsNullOrEmpty(state.SourceUrl))
+            return Result.Fail(
+                "Este tema não tem uma origem salva (foi instalado antes desta versão do OttoRice) — reinstale pela aba Instalar.");
+
+        progress?.Invoke("Baixando os arquivos do tema novamente...");
+        var fetched = await fetcher.FetchAsync(state.SourceUrl, ct);
+        if (!fetched.IsSuccess)
+            return Result.Fail($"Falha ao baixar o tema: {fetched.Error}");
+
+        if (paletteId is not null && fetched.Value!.Manifest.Palettes.All(p => p.Id != paletteId))
+            return Result.Fail($"Paleta '{paletteId}' não existe mais no manifesto deste tema.");
+
+        var context = new InstallContext
+        {
+            Manifest = fetched.Value!.Manifest,
+            ThemeDirectory = fetched.Value.ThemeDirectory,
+            Progress = progress,
+            SelectedTargetIndexes = null,
+            PaletteId = paletteId,
+        };
+
+        var result = await pipeline.RunAsync(context, ct);
+        if (!result.IsSuccess)
+            return result;
+
+        await PersistDerivedStateAsync(state with { ActivePaletteId = paletteId }, context, ct);
+
+        logger?.LogInformation("Paleta '{PaletteId}' aplicada ao tema {ThemeId}.", paletteId ?? "(padrão)", themeId);
+        return Result.Ok();
+    }
+
+    /// <summary>Atualiza os caminhos derivados (podem ter mudado se o conteúdo do tema mudou),
+    /// preservando o que só a instalação/backup original sabe (wallpaper anterior etc.).</summary>
+    private Task PersistDerivedStateAsync(ThemeState state, InstallContext context, CancellationToken ct)
+    {
         var wallpaperOp = context.Operations.FirstOrDefault(op => op.Target.Action == "set");
         var glazeOp = context.Operations.FirstOrDefault(op => op.Target.App == "glazewm");
-        await stateStore.UpsertThemeAsync(state with
+        return stateStore.UpsertThemeAsync(state with
         {
             ThemeWallpaperPath = wallpaperOp?.SourcePath ?? state.ThemeWallpaperPath,
             GlazeWmConfigPath = glazeOp?.TargetPath ?? state.GlazeWmConfigPath,
@@ -109,8 +191,5 @@ public sealed class ReapplyThemeService(
                 ? [.. context.Operations.Select(op => op.Target.App!).Distinct()]
                 : state.ManagedApps,
         }, ct: ct);
-
-        logger?.LogInformation("Tema {ThemeId} reaplicado.", themeId);
-        return Result.Ok();
     }
 }
