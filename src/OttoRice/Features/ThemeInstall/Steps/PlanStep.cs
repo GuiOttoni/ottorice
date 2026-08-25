@@ -1,3 +1,4 @@
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
@@ -12,7 +13,16 @@ public sealed class PlanStep(TargetPlanner planner, ILogger<PlanStep>? logger = 
 
     public Task<Result> ExecuteAsync(InstallContext context, CancellationToken ct = default)
     {
-        var plan = planner.Build(context.Manifest, context.ThemeDirectory);
+        // Toggle por componente: se o usuário desmarcou algum target na prévia, os índices
+        // selecionados chegam aqui e só esses viram operação — os demais nunca são planejados
+        // nem aplicados. null = todos (comportamento padrão).
+        var targets = context.SelectedTargetIndexes is null
+            ? context.Manifest.Targets
+            : context.Manifest.Targets
+                .Where((_, i) => context.SelectedTargetIndexes.Contains(i))
+                .ToList();
+
+        var plan = planner.Build(context.Manifest, context.ThemeDirectory, targets);
         if (!plan.IsSuccess)
         {
             logger?.LogWarning("Planejamento falhou: {Error}", plan.Error);

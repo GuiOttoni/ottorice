@@ -1,10 +1,12 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using OttoRice.Common;
 using OttoRice.Features.ThemeImport;
+using OttoRice.Features.ThemeImport.Models;
 using OttoRice.Features.ThemeToggle;
 
 namespace OttoRice.Features.ThemeInstall;
@@ -35,10 +37,41 @@ public sealed class ReapplyThemeService(
     ThemeStateStore stateStore,
     ILogger<ReapplyThemeService>? logger = null)
 {
+    /// <summary>
+    /// Busca de novo os targets do tema instalado, sem aplicar nada — usado pra popular o
+    /// checkbox de toggle por componente na UI de reaplicação antes de confirmar (evita reusar
+    /// um manifesto potencialmente desatualizado: o conteúdo do tema pode ter mudado desde a
+    /// instalação/última reaplicação).
+    /// </summary>
+    public async Task<Result<IReadOnlyList<RiceTarget>>> FetchTargetsAsync(
+        string themeId, CancellationToken ct = default)
+    {
+        var installed = await stateStore.ReadAsync(ct);
+        if (!installed.Themes.TryGetValue(themeId, out var state))
+            return Result<IReadOnlyList<RiceTarget>>.Fail($"Tema '{themeId}' não está instalado.");
+        if (string.IsNullOrEmpty(state.SourceUrl))
+            return Result<IReadOnlyList<RiceTarget>>.Fail(
+                "Este tema não tem uma origem salva (foi instalado antes desta versão do OttoRice) — reinstale pela aba Instalar.");
+
+        var fetched = await fetcher.FetchAsync(state.SourceUrl, ct);
+        if (!fetched.IsSuccess)
+            return Result<IReadOnlyList<RiceTarget>>.Fail($"Falha ao baixar o tema: {fetched.Error}");
+
+        return Result<IReadOnlyList<RiceTarget>>.Ok(fetched.Value!.Manifest.Targets);
+    }
+
     /// <summary>Reaplica o tema indicado (qualquer tema instalado, não só o ativo — seção 12.3
     /// do plano de evolução generalizou este método para N temas).</summary>
+    /// <param name="selectedTargetIndexes">
+    /// Índices (na ordem de <see cref="RiceManifest.Targets"/> do manifesto rebaixado) dos
+    /// componentes a reaplicar desta vez — toggle por componente (mesma ideia da instalação:
+    /// ex. reaplicar só o wallpaper sem mexer no YASB de novo). <c>null</c> = todos (padrão).
+    /// </param>
     public async Task<Result> ReapplyAsync(
-        string themeId, Action<string>? progress = null, CancellationToken ct = default)
+        string themeId,
+        Action<string>? progress = null,
+        CancellationToken ct = default,
+        IReadOnlySet<int>? selectedTargetIndexes = null)
     {
         var installed = await stateStore.ReadAsync(ct);
         if (!installed.Themes.TryGetValue(themeId, out var state))
@@ -57,6 +90,7 @@ public sealed class ReapplyThemeService(
             Manifest = fetched.Value!.Manifest,
             ThemeDirectory = fetched.Value.ThemeDirectory,
             Progress = progress,
+            SelectedTargetIndexes = selectedTargetIndexes,
         };
 
         var result = await pipeline.RunAsync(context, ct);

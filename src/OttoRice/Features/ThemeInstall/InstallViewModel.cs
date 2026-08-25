@@ -54,6 +54,10 @@ public partial class InstallViewModel(
     public ObservableCollection<string> Dependencies { get; } = [];
     public ObservableCollection<StepStatusItem> Steps { get; } = [];
 
+    /// <summary>Um checkbox por componente (target) do tema — ligar/desligar cada um antes de
+    /// instalar. Todos vêm marcados por padrão; ver <see cref="TargetSelectionItem"/>.</summary>
+    public ObservableCollection<TargetSelectionItem> Targets { get; } = [];
+
     public bool HasPreview => FetchedTheme is not null;
     public string ThemeTitle => FetchedTheme is null
         ? ""
@@ -106,6 +110,15 @@ public partial class InstallViewModel(
             foreach (var dep in manifest.Dependencies)
                 Dependencies.Add(dep.WingetId!);
 
+            Targets.Clear();
+            for (var i = 0; i < manifest.Targets.Count; i++)
+            {
+                var item = new TargetSelectionItem(i, manifest.Targets[i]);
+                // (Des)marcar um componente pode zerar a seleção — reavalia se "Instalar" pode rodar.
+                item.PropertyChanged += (_, _) => InstallCommand.NotifyCanExecuteChanged();
+                Targets.Add(item);
+            }
+
             Steps.Clear();
             foreach (var name in pipeline.StepNames)
                 Steps.Add(new StepStatusItem(name));
@@ -140,7 +153,7 @@ public partial class InstallViewModel(
         }
     }
 
-    private bool CanInstall() => !IsBusy && FetchedTheme is not null;
+    private bool CanInstall() => !IsBusy && FetchedTheme is not null && Targets.Any(t => t.IsSelected);
 
     [RelayCommand(CanExecute = nameof(CanInstall))]
     private async Task InstallAsync()
@@ -157,6 +170,9 @@ public partial class InstallViewModel(
 
         try
         {
+            // Toggle por componente: só os targets ainda marcados na prévia entram no plano.
+            var selectedIndexes = Targets.Where(t => t.IsSelected).Select(t => t.Index).ToHashSet();
+
             var context = new InstallContext
             {
                 Manifest = theme.Manifest,
@@ -168,6 +184,7 @@ public partial class InstallViewModel(
                     if (item is not null)
                         item.State = state;
                 },
+                SelectedTargetIndexes = selectedIndexes,
             };
 
             var result = await pipeline.RunAsync(context, _cts.Token);

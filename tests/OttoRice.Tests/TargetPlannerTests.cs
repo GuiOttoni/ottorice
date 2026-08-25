@@ -209,5 +209,35 @@ public class TargetPlannerTests : IDisposable
         Assert.False(_planner.Build(manifest, _themeDir).IsSuccess);
     }
 
+    [Fact]
+    public void Explicit_targets_override_narrows_the_plan_to_only_those_targets()
+    {
+        // Toggle por componente: passar um subconjunto de targets (em vez do manifest.Targets
+        // completo) planeja só esse subconjunto — é o seam que o PlanStep usa.
+        WriteThemeFile("configs/config.yaml");
+        WriteThemeFile("assets/wall.png");
+        var manifest = Manifest(
+            new RiceTarget { App = "glazewm", Action = "override", Source = "configs/config.yaml" },
+            new RiceTarget { App = "wallpaper", Action = "set", Source = "assets/wall.png" });
+
+        var plan = _planner.Build(manifest, _themeDir, [manifest.Targets[1]]);
+
+        Assert.True(plan.IsSuccess, plan.Error);
+        var op = Assert.Single(plan.Value!);
+        Assert.Equal("wallpaper", op.Target.App);
+    }
+
+    [Fact]
+    public void Empty_targets_override_produces_no_operations()
+    {
+        WriteThemeFile("configs/config.yaml");
+        var manifest = Manifest(new RiceTarget { App = "glazewm", Action = "override", Source = "configs/config.yaml" });
+
+        var plan = _planner.Build(manifest, _themeDir, []);
+
+        Assert.True(plan.IsSuccess, plan.Error);
+        Assert.Empty(plan.Value!);
+    }
+
     public void Dispose() => Directory.Delete(_dir, recursive: true);
 }

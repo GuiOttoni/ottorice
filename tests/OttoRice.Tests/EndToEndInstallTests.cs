@@ -228,6 +228,57 @@ public class EndToEndInstallTests : IDisposable
         Assert.Equal(["glzr-io.glazewm", "AmN.yasb"], context.WingetIdsInstalled);
     }
 
+    /// <summary>
+    /// Toggle por componente (RF: desligar/ligar cada target na instalação): desmarcar
+    /// YASB e Windows Terminal na prévia faz o pipeline instalar só GlazeWM e wallpaper —
+    /// os outros dois nunca são planejados nem aplicados (o config do YASB nem chega a
+    /// existir, e o settings.json do Windows Terminal do usuário fica intocado).
+    /// </summary>
+    [Fact]
+    public async Task Selected_target_indexes_narrow_the_install_to_only_those_targets()
+    {
+        var manifestJson = await File.ReadAllTextAsync(
+            Path.Combine(ExampleThemeDir, ThemeFetcher.ManifestFileName));
+        var manifest = ManifestValidator.Parse(manifestJson);
+        Assert.True(manifest.IsSuccess, manifest.Error);
+        // targets: 0=glazewm, 1=yasb, 2=windows_terminal, 3=wallpaper — mantém só 0 e 3.
+        Assert.Equal("yasb", manifest.Value!.Targets[1].App);
+        Assert.Equal("windows_terminal", manifest.Value!.Targets[2].App);
+
+        var wtBefore = await File.ReadAllTextAsync(_wtSettingsPath);
+
+        var context = new InstallContext
+        {
+            Manifest = manifest.Value!,
+            ThemeDirectory = ExampleThemeDir,
+            SelectedTargetIndexes = new HashSet<int> { 0, 3 },
+        };
+        var result = await BuildPipeline().RunAsync(context);
+
+        Assert.True(result.IsSuccess, result.Error);
+
+        var glazeConfig = Path.Combine(_fakeUserProfile, ".glzr", "glazewm", "config.yaml");
+        Assert.True(File.Exists(glazeConfig));
+        _wallpaper.Received(1).Set(Path.Combine(ExampleThemeDir, "assets", "wallpaper.png"));
+
+        // YASB nunca foi planejado nem aplicado — a pasta de config nem chega a existir.
+        Assert.False(File.Exists(Path.Combine(_fakeUserProfile, ".config", "yasb", "config.yaml")));
+        Assert.False(Directory.Exists(Path.Combine(_fakeUserProfile, ".config", "yasb")));
+
+        // Windows Terminal: settings.json do usuário intocado (nenhum esquema injetado).
+        Assert.Equal(wtBefore, await File.ReadAllTextAsync(_wtSettingsPath));
+
+        // Só 2 operações planejadas (GlazeWM + wallpaper) — YASB e Windows Terminal nunca
+        // chegaram ao TargetPlanner/ApplyStep.
+        Assert.Equal(2, context.Operations.Count);
+
+        // Decisão documentada (ver InstallPipeline/DependencyStep): dependências do WinGet não
+        // são filtradas pela seleção de targets — o manifesto não amarra dependency[] a um
+        // target específico (schema atual não tem esse vínculo), então ambas continuam
+        // instaladas mesmo com o target do YASB desmarcado.
+        Assert.Equal(["glzr-io.glazewm", "AmN.yasb"], context.WingetIdsInstalled);
+    }
+
     [Fact]
     public async Task Failure_after_apply_rolls_everything_back()
     {

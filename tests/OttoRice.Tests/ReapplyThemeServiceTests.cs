@@ -144,6 +144,71 @@ public class ReapplyThemeServiceTests : IDisposable
         Assert.Contains("glazewm", saved.ManagedApps);
     }
 
+    /// <summary>Toggle por componente na reaplicação: só o(s) target(s) selecionado(s) chega(m)
+    /// ao InstallContext (via <see cref="InstallContext.SelectedTargetIndexes"/>).</summary>
+    [Fact]
+    public async Task Selected_target_indexes_flow_through_to_the_pipeline_context()
+    {
+        await _store.UpsertThemeAsync(new ThemeState
+        {
+            ThemeId = "t", ThemeName = "T", IsEnabled = true, SourceUrl = "https://github.com/o/r",
+        }, makeActive: true);
+        _fetcher.FetchAsync("https://github.com/o/r", Arg.Any<CancellationToken>())
+                .Returns(Result<FetchedTheme>.Ok(Fetched()));
+
+        InstallContext? captured = null;
+        var capturingStep = new CapturingStep(ctx => captured = ctx);
+        var pipeline = new InstallPipeline([capturingStep]);
+        var service = new ReapplyThemeService(_fetcher, pipeline, _store);
+
+        var result = await service.ReapplyAsync("t", selectedTargetIndexes: new HashSet<int> { 0 });
+
+        Assert.True(result.IsSuccess, result.Error);
+        Assert.NotNull(captured);
+        Assert.Equal(new HashSet<int> { 0 }, captured!.SelectedTargetIndexes);
+    }
+
+    private sealed class CapturingStep(Action<InstallContext> capture) : IInstallStep
+    {
+        public string Name => "captura";
+
+        public Task<Result> ExecuteAsync(InstallContext context, CancellationToken ct = default)
+        {
+            capture(context);
+            return Task.FromResult(Result.Ok());
+        }
+    }
+
+    /// <summary>FetchTargetsAsync popula a UI de seleção antes de reaplicar, sem aplicar nada.</summary>
+    [Fact]
+    public async Task FetchTargetsAsync_returns_the_manifest_targets_without_applying_anything()
+    {
+        await _store.UpsertThemeAsync(new ThemeState
+        {
+            ThemeId = "t", ThemeName = "T", IsEnabled = true, SourceUrl = "https://github.com/o/r",
+        }, makeActive: true);
+        var manifest = new RiceManifest
+        {
+            ThemeId = "t",
+            Name = "T",
+            Targets =
+            [
+                new RiceTarget { App = "glazewm", Action = "override", Source = "s1" },
+                new RiceTarget { App = "wallpaper", Action = "set", Source = "s2" },
+            ],
+        };
+        _fetcher.FetchAsync("https://github.com/o/r", Arg.Any<CancellationToken>())
+                .Returns(Result<FetchedTheme>.Ok(new FetchedTheme("dir", manifest)));
+        var service = new ReapplyThemeService(_fetcher, new InstallPipeline([]), _store);
+
+        var result = await service.FetchTargetsAsync("t");
+
+        Assert.True(result.IsSuccess, result.Error);
+        Assert.Equal(2, result.Value!.Count);
+        Assert.Equal("glazewm", result.Value[0].App);
+        Assert.Equal("wallpaper", result.Value[1].App);
+    }
+
     [Fact]
     public async Task Can_reapply_an_installed_theme_that_is_not_the_active_one()
     {

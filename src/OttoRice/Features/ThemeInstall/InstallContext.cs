@@ -21,6 +21,18 @@ public sealed class InstallContext
     /// <summary>Notifica transições de estado de um step, pra visualização gráfica na UI.</summary>
     public Action<string, InstallStepState>? StepStateChanged { get; init; }
 
+    /// <summary>
+    /// Índices (na lista <see cref="RiceManifest.Targets"/> do manifesto, na ordem em que
+    /// aparecem) dos targets que o usuário escolheu aplicar nesta execução — toggle por
+    /// componente (RF: ligar/desligar cada componente do tema na instalação/reaplicação).
+    /// <c>null</c> = todos os targets do manifesto (comportamento padrão, retrocompatível).
+    /// A validação do manifesto completo (<see cref="OttoRice.Features.ThemeImport.ManifestValidator"/>)
+    /// roda antes disso e continua vendo o manifesto inteiro — este filtro só decide o que o
+    /// <see cref="Steps.PlanStep"/> manda pro <see cref="TargetPlanner"/>, então targets
+    /// desmarcados nunca chegam a ser planejados nem aplicados.
+    /// </summary>
+    public IReadOnlySet<int>? SelectedTargetIndexes { get; init; }
+
     public List<FileOperation> Operations { get; } = [];
     public BackupSessionInfo? BackupSession { get; set; }
     public string? PreviousWallpaperPath { get; set; }

@@ -20,12 +20,18 @@ public sealed class TargetPlanner(
 {
     private readonly Func<string, string> _expand = pathExpander ?? PathResolver.Expand;
 
-    public Result<List<FileOperation>> Build(RiceManifest manifest, string themeDirectory)
+    /// <param name="targets">
+    /// Targets a planejar — por padrão (<c>null</c>), todos os do manifesto. Passar um
+    /// subconjunto é como o toggle por componente (RF) filtra o que chega a ser planejado/
+    /// aplicado, sem precisar de um manifesto "reduzido" nem reabrir a validação.
+    /// </param>
+    public Result<List<FileOperation>> Build(
+        RiceManifest manifest, string themeDirectory, IReadOnlyList<RiceTarget>? targets = null)
     {
         var themeRoot = Path.GetFullPath(themeDirectory);
         var operations = new List<FileOperation>();
 
-        foreach (var target in manifest.Targets)
+        foreach (var target in targets ?? manifest.Targets)
         {
             var app = SupportedApps.All[target.App!];
 

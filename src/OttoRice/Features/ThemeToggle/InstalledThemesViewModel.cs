@@ -65,10 +65,63 @@ public partial class InstalledThemesViewModel(
         ? Task.CompletedTask
         : RunAsync(progress => toggle.ActivateAsync(item.ThemeId, progress), $"✅ '{item.ThemeName}' ativado.");
 
+    /// <summary>
+    /// Reaplicar é em dois cliques: o primeiro busca os componentes do tema (RiceTarget[])
+    /// pra deixar o usuário ligar/desligar cada um (toggle por componente — "configurar um
+    /// tema" também cobre reaplicação, não só a instalação inicial); o segundo confirma com
+    /// a seleção feita. <see cref="InstalledThemeItem.IsSelectingTargets"/> distingue os dois.
+    /// </summary>
     [RelayCommand(CanExecute = nameof(NotBusy))]
-    private Task ReapplyAsync(InstalledThemeItem? item) => item is null
-        ? Task.CompletedTask
-        : RunAsync(progress => reapply.ReapplyAsync(item.ThemeId, progress), $"✅ '{item.ThemeName}' reaplicado.");
+    private async Task ReapplyAsync(InstalledThemeItem? item)
+    {
+        if (item is null)
+            return;
+
+        if (!item.IsSelectingTargets)
+        {
+            await PrepareReapplySelectionAsync(item);
+            return;
+        }
+
+        var selected = item.Targets.Where(t => t.IsSelected).Select(t => t.Index).ToHashSet();
+        item.IsSelectingTargets = false;
+        await RunAsync(
+            progress => reapply.ReapplyAsync(item.ThemeId, progress, selectedTargetIndexes: selected),
+            $"✅ '{item.ThemeName}' reaplicado.");
+    }
+
+    private async Task PrepareReapplySelectionAsync(InstalledThemeItem item)
+    {
+        IsBusy = true;
+        try
+        {
+            var targets = await reapply.FetchTargetsAsync(item.ThemeId);
+            if (!targets.IsSuccess)
+            {
+                StatusMessage = $"❌ {targets.Error}";
+                return;
+            }
+
+            item.Targets.Clear();
+            for (var i = 0; i < targets.Value!.Count; i++)
+                item.Targets.Add(new TargetSelectionItem(i, targets.Value[i]));
+            item.IsSelectingTargets = true;
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
+    /// <summary>Desiste da seleção de componentes aberta por <see cref="ReapplyAsync"/> sem reaplicar nada.</summary>
+    [RelayCommand]
+    private void CancelReapplySelection(InstalledThemeItem? item)
+    {
+        if (item is null)
+            return;
+        item.IsSelectingTargets = false;
+        item.Targets.Clear();
+    }
 
     [RelayCommand(CanExecute = nameof(NotBusy))]
     private Task UninstallAsync(InstalledThemeItem? item) => item is null
@@ -100,8 +153,10 @@ public partial class InstalledThemesViewModel(
     }
 }
 
-/// <summary>Linha da lista "Temas instalados" — projeção somente leitura de uma entrada de <see cref="ThemeState"/>.</summary>
-public sealed class InstalledThemeItem(string themeId, ThemeState state, bool isActive)
+/// <summary>Linha da lista "Temas instalados" — projeção de uma entrada de <see cref="ThemeState"/>,
+/// mais o estado (não persistido — ver <see cref="TargetSelectionItem"/>) da seleção de
+/// componentes pra reaplicar em dois cliques.</summary>
+public sealed partial class InstalledThemeItem(string themeId, ThemeState state, bool isActive) : ObservableObject
 {
     public string ThemeId { get; } = themeId;
     public string ThemeName { get; } = state.ThemeName ?? themeId;
@@ -112,4 +167,16 @@ public sealed class InstalledThemeItem(string themeId, ThemeState state, bool is
     public string StatusLabel => !IsActive
         ? "Instalado (inativo)"
         : IsEnabled ? "🟢 Ativo e ligado" : "⚪ Ativo e desligado";
+
+    /// <summary>Componentes do tema (buscados sob demanda no primeiro clique em "Reaplicar"),
+    /// pra ligar/desligar antes de confirmar. Vazio até então.</summary>
+    public ObservableCollection<TargetSelectionItem> Targets { get; } = [];
+
+    /// <summary>True entre o primeiro clique em "Reaplicar" (busca os componentes) e o
+    /// segundo (confirma a seleção) — troca o botão por "Confirmar" + a lista de checkboxes.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ReapplyButtonLabel))]
+    private bool _isSelectingTargets;
+
+    public string ReapplyButtonLabel => IsSelectingTargets ? "CONFIRMAR REAPLICAÇÃO" : "REAPLICAR";
 }
