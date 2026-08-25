@@ -231,4 +231,108 @@ public class ManifestValidatorTests
         Assert.False(result.IsSuccess);
         Assert.Contains("JSON", result.Error);
     }
+
+    // ── palettes[] (seção 13 da doc "OttoRice") ─────────────────────────────
+
+    [Fact]
+    public void Valid_palette_passes()
+    {
+        var manifest = ValidManifest() with
+        {
+            Palettes = [new RicePalette { Id = "latte", Name = "Catppuccin Latte", SourceOverride = "palettes/latte" }],
+        };
+        Assert.Empty(ManifestValidator.Validate(manifest));
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("Não Kebab")]
+    [InlineData("UPPER-case")]
+    public void Invalid_palette_id_fails(string? id)
+    {
+        var manifest = ValidManifest() with
+        {
+            Palettes = [new RicePalette { Id = id, Name = "X", SourceOverride = "palettes/x" }],
+        };
+        Assert.Contains(ManifestValidator.Validate(manifest), e => e.Contains("id"));
+    }
+
+    [Fact]
+    public void Duplicate_palette_id_fails()
+    {
+        var manifest = ValidManifest() with
+        {
+            Palettes =
+            [
+                new RicePalette { Id = "latte", Name = "Latte 1", SourceOverride = "palettes/latte" },
+                new RicePalette { Id = "latte", Name = "Latte 2", SourceOverride = "palettes/latte2" },
+            ],
+        };
+        Assert.Contains(ManifestValidator.Validate(manifest), e => e.Contains("duplicado"));
+    }
+
+    [Theory]
+    [InlineData("../fora-do-repo")]
+    [InlineData("palettes/../../escape")]
+    [InlineData(@"C:\Windows\evil")]
+    [InlineData(null)]
+    public void Unsafe_palette_source_override_fails(string? sourceOverride)
+    {
+        var manifest = ValidManifest() with
+        {
+            Palettes = [new RicePalette { Id = "latte", Name = "Catppuccin Latte", SourceOverride = sourceOverride }],
+        };
+        Assert.Contains(ManifestValidator.Validate(manifest), e => e.Contains("sourceOverride"));
+    }
+
+    [Fact]
+    public void Palette_source_override_missing_on_disk_fails_when_theme_root_known()
+    {
+        var tempDir = Directory.CreateTempSubdirectory("ottorice-palette-test-");
+        try
+        {
+            var manifest = ValidManifest() with
+            {
+                Palettes = [new RicePalette { Id = "latte", Name = "Catppuccin Latte", SourceOverride = "palettes/latte" }],
+            };
+            var errors = ManifestValidator.Validate(manifest, tempDir.FullName);
+            Assert.Contains(errors, e => e.Contains("não existe no tema"));
+        }
+        finally
+        {
+            tempDir.Delete(recursive: true);
+        }
+    }
+
+    [Fact]
+    public void Palette_source_override_present_on_disk_passes_when_theme_root_known()
+    {
+        var tempDir = Directory.CreateTempSubdirectory("ottorice-palette-test-");
+        try
+        {
+            Directory.CreateDirectory(Path.Combine(tempDir.FullName, "palettes", "latte"));
+            var manifest = ValidManifest() with
+            {
+                Palettes = [new RicePalette { Id = "latte", Name = "Catppuccin Latte", SourceOverride = "palettes/latte" }],
+            };
+            Assert.Empty(ManifestValidator.Validate(manifest, tempDir.FullName));
+        }
+        finally
+        {
+            tempDir.Delete(recursive: true);
+        }
+    }
+
+    [Fact]
+    public void Missing_palette_directory_without_theme_root_does_not_fail()
+    {
+        // Sem themeRoot conhecido (ex.: editor de manifesto antes de salvar), a checagem de
+        // existência é pulada — só a forma do caminho é validada.
+        var manifest = ValidManifest() with
+        {
+            Palettes = [new RicePalette { Id = "latte", Name = "Catppuccin Latte", SourceOverride = "palettes/does-not-exist" }],
+        };
+        Assert.Empty(ManifestValidator.Validate(manifest));
+    }
 }

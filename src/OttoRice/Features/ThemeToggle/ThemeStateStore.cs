@@ -33,6 +33,10 @@ public sealed record ThemeState
 
     public string? GlazeWmConfigPath { get; init; }
 
+    /// <summary>Id da paleta de cores alternativa ativa (seção 13 da doc "OttoRice"), ou
+    /// <c>null</c> para a paleta padrão do tema (<c>configs/</c>, sem override).</summary>
+    public string? ActivePaletteId { get; init; }
+
     /// <summary>Ids do registry que este tema gerencia (glazewm, yasb, zebar...).</summary>
     public IReadOnlyList<string> ManagedApps { get; init; } = [];
 

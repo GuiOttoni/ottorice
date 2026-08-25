@@ -28,6 +28,9 @@ configs/windhawk/taskbar-styler.yaml               settings do Taskbar Styler (W
 configs/windhawk/start-menu-styler.yaml            settings do Start Menu Styler (Windhawk)
 configs/windhawk/notification-center-styler.yaml   settings do Notification Center Styler (Windhawk)
 assets/wallpaper.png, assets/preview.png     gerados nesta sessão (gradiente + glow)
+palettes/latte/configs/...                   paleta alternativa Catppuccin Latte (glazewm/yasb/wt)
+palettes/frappe/configs/...                  paleta alternativa Catppuccin Frappé (glazewm/yasb/wt)
+palettes/macchiato/configs/...               paleta alternativa Catppuccin Macchiato (glazewm/yasb/wt)
 ```
 
 ## Mapeamento feature a feature (windots → OttoRice)
@@ -138,6 +141,39 @@ outro target do manifesto (`action: override`), sem nenhuma etapa manual. Única
 de conteúdo: adicionado `glazewm_workspaces` (o WinUI11 original não tem nenhum widget de
 window manager) e mantido o `taskbar` que já substituía a nativa nas versões anteriores
 deste exemplo.
+
+## Paletas alternativas (Mocha/Latte/Frappé/Macchiato)
+
+Este tema é o primeiro a exercitar a **troca de paleta pós-instalação** (seção 13 da doc
+"OttoRice"): além da paleta padrão (`configs/`, Catppuccin **Mocha**), o manifesto declara
+`palettes[]` com as outras três variantes oficiais do Catppuccin — **Latte** (clara),
+**Frappé** e **Macchiato** — todas com os hex oficiais de https://catppuccin.com/palette.
+Na aba "TEMAS INSTALADOS" do OttoRice, o tema já instalado ganha um botão "PALETA" que
+troca a paleta ativa a qualquer momento, sem precisar desinstalar/reinstalar.
+
+Mecanismo (implementado no core, não específico deste tema): cada paleta é um diretório
+**alternativo completo** — `palettes/<id>/configs/...` — que espelha a mesma estrutura
+relativa de `configs/` só para os targets que ela recolore. Trocar de paleta reaplica o
+tema resolvendo cada target primeiro dentro do diretório da paleta ativa; um target sem
+override ali cai de volta no `configs/` padrão (Mocha) automaticamente.
+
+**Cobertura real desta rodada — de propósito limitada, pra provar o mecanismo antes de
+generalizar:**
+
+| Target | Tem paleta alternativa? |
+|---|---|
+| `glazewm` (`configs/glazewm/config.yaml`) | ✅ — só as duas cores de `window_effects` (borda focada/não-focada) mudam |
+| `yasb` (`configs/yasb/`) | ✅ — `config.yaml` (idêntico, copiado só porque o override é por pasta inteira) + `styles.css` (todos os hex/rgba recoloridos, mesmos seletores) |
+| `windows_terminal` (`configs/wt-scheme.json`) | ✅ — esquemas oficiais publicados pelo próprio Catppuccin ([catppuccin/windows-terminal](https://github.com/catppuccin/windows-terminal)) |
+| `vscode`, `zed`, `fastfetch`, `flow_launcher`, `oh_my_posh` | ❌ fora de escopo — sem override; ficam sempre na paleta Mocha do `configs/`, mesmo trocando a paleta ativa |
+| `wallpaper` | ❌ fora de escopo — mesmo motivo |
+| Os três `configure_mod` do Windhawk | ❌ fora de escopo — settings de mod não são "cor" no mesmo sentido, e nenhum dos três tem preset Catppuccin (ver nota acima) |
+
+Essa lacuna é esperada e documentada, não um bug: o objetivo desta rodada era provar o
+mecanismo (manifesto → resolução de paleta → pipeline de reaplicação) de ponta a ponta
+num subconjunto real, não recolorir os nove apps de novo. Cobrir os cinco apps restantes
+é trabalho mecânico igual ao já feito aqui (gerar `palettes/<id>/configs/<app>/...`), só
+não foi feito ainda.
 
 ## Como usar
 

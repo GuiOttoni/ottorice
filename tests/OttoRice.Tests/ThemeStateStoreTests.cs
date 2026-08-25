@@ -142,5 +142,27 @@ public class ThemeStateStoreTests : IDisposable
         Assert.Equal("t", rereadInstalled.ActiveThemeId);
     }
 
+    [Fact]
+    public async Task ActivePaletteId_round_trips_through_upsert_and_read()
+    {
+        await _store.UpsertThemeAsync(
+            new ThemeState { ThemeId = "catppuccin", ThemeName = "Catppuccin", ActivePaletteId = "latte" },
+            makeActive: true);
+
+        var installed = await _store.ReadAsync();
+
+        Assert.Equal("latte", installed.Themes["catppuccin"].ActivePaletteId);
+    }
+
+    [Fact]
+    public async Task ActivePaletteId_defaults_to_null_meaning_the_default_palette()
+    {
+        await _store.UpsertThemeAsync(new ThemeState { ThemeId = "catppuccin", ThemeName = "Catppuccin" });
+
+        var installed = await _store.ReadAsync();
+
+        Assert.Null(installed.Themes["catppuccin"].ActivePaletteId);
+    }
+
     public void Dispose() => Directory.Delete(_dir, recursive: true);
 }

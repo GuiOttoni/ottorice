@@ -22,7 +22,18 @@ public sealed class PlanStep(TargetPlanner planner, ILogger<PlanStep>? logger = 
                 .Where((_, i) => context.SelectedTargetIndexes.Contains(i))
                 .ToList();
 
-        var plan = planner.Build(context.Manifest, context.ThemeDirectory, targets);
+        string? paletteSourceOverride = null;
+        if (context.PaletteId is not null)
+        {
+            var palette = context.Manifest.Palettes.FirstOrDefault(p => p.Id == context.PaletteId);
+            if (palette is null)
+                logger?.LogWarning(
+                    "Paleta '{PaletteId}' não existe mais no manifesto do tema '{ThemeId}' — aplicando a paleta padrão.",
+                    context.PaletteId, context.Manifest.ThemeId);
+            paletteSourceOverride = palette?.SourceOverride;
+        }
+
+        var plan = planner.Build(context.Manifest, context.ThemeDirectory, targets, paletteSourceOverride);
         if (!plan.IsSuccess)
         {
             logger?.LogWarning("Planejamento falhou: {Error}", plan.Error);

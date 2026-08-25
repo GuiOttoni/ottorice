@@ -33,6 +33,14 @@ public sealed class InstallContext
     /// </summary>
     public IReadOnlySet<int>? SelectedTargetIndexes { get; init; }
 
+    /// <summary>
+    /// Id da paleta de cores alternativa a aplicar (seção 13 da doc "OttoRice"), ou
+    /// <c>null</c> para a paleta padrão (<c>configs/</c> do manifesto, sem override). Resolvido
+    /// pelo <see cref="Steps.PlanStep"/> contra <see cref="RiceManifest.Palettes"/> antes de
+    /// chamar o <see cref="TargetPlanner"/>.
+    /// </summary>
+    public string? PaletteId { get; init; }
+
     public List<FileOperation> Operations { get; } = [];
     public BackupSessionInfo? BackupSession { get; set; }
     public string? PreviousWallpaperPath { get; set; }

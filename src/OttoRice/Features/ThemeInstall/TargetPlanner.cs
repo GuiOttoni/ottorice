@@ -25,11 +25,33 @@ public sealed class TargetPlanner(
     /// subconjunto é como o toggle por componente (RF) filtra o que chega a ser planejado/
     /// aplicado, sem precisar de um manifesto "reduzido" nem reabrir a validação.
     /// </param>
+    /// <param name="paletteSourceOverride">
+    /// <see cref="RicePalette.SourceOverride"/> da paleta ativa, se houver (seção 13 da doc
+    /// "OttoRice"). Para cada target, resolve primeiro <c>{paletteSourceOverride}/{target.Source}</c>
+    /// — se esse caminho existir (arquivo ou pasta), ele é usado no lugar do
+    /// <c>configs/</c> padrão; caso contrário (a paleta não recolore aquele target), cai de
+    /// volta em <c>{target.Source}</c> normalmente. <c>null</c> = sempre usa o padrão.
+    /// </param>
     public Result<List<FileOperation>> Build(
-        RiceManifest manifest, string themeDirectory, IReadOnlyList<RiceTarget>? targets = null)
+        RiceManifest manifest, string themeDirectory, IReadOnlyList<RiceTarget>? targets = null,
+        string? paletteSourceOverride = null)
     {
         var themeRoot = Path.GetFullPath(themeDirectory);
         var operations = new List<FileOperation>();
+
+        string ResolveSource(string relativeSource)
+        {
+            if (paletteSourceOverride is not null)
+            {
+                var candidate = Path.GetFullPath(Path.Combine(themeRoot, paletteSourceOverride, relativeSource));
+                if ((File.Exists(candidate) || Directory.Exists(candidate)) &&
+                    candidate.StartsWith(themeRoot, StringComparison.OrdinalIgnoreCase))
+                {
+                    return candidate;
+                }
+            }
+            return Path.GetFullPath(Path.Combine(themeRoot, relativeSource));
+        }
 
         foreach (var target in targets ?? manifest.Targets)
         {
@@ -47,7 +69,7 @@ public sealed class TargetPlanner(
                     continue;
                 }
 
-                var modSourcePath = Path.GetFullPath(Path.Combine(themeRoot, target.Source));
+                var modSourcePath = ResolveSource(target.Source);
                 if (!modSourcePath.StartsWith(themeRoot, StringComparison.OrdinalIgnoreCase))
                     return Fail($"source '{target.Source}' resolve para fora do diretório do tema.");
                 if (!File.Exists(modSourcePath))
@@ -57,7 +79,7 @@ public sealed class TargetPlanner(
                 continue;
             }
 
-            var sourcePath = Path.GetFullPath(Path.Combine(themeRoot, target.Source!));
+            var sourcePath = ResolveSource(target.Source!);
 
             // Defesa em profundidade: o validator já barra "..", mas nunca opere fora do tema.
             if (!sourcePath.StartsWith(themeRoot, StringComparison.OrdinalIgnoreCase))

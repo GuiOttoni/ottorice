@@ -66,6 +66,13 @@ public partial class ThemeEditorViewModel(
     [ObservableProperty]
     private string? _preview;
 
+    /// <summary>
+    /// Paletas de cores alternativas (seção 13 da doc "OttoRice") carregadas do manifesto —
+    /// sem UI de edição ainda (fora do escopo desta rodada), mas preservadas ao salvar em vez
+    /// de serem descartadas silenciosamente (o que apagaria o recurso de um tema editado).
+    /// </summary>
+    private List<RicePalette> _loadedPalettes = [];
+
     public ObservableCollection<EditableDependency> Dependencies { get; } = [];
     public ObservableCollection<EditableTarget> Targets { get; } = [];
     public ObservableCollection<string> ValidationErrors { get; } = [];
@@ -150,6 +157,7 @@ public partial class ThemeEditorViewModel(
         Name = manifest.Name;
         Author = manifest.Author;
         Preview = manifest.Preview;
+        _loadedPalettes = [.. manifest.Palettes];
 
         Dependencies.Clear();
         foreach (var dep in manifest.Dependencies)
@@ -200,6 +208,9 @@ public partial class ThemeEditorViewModel(
                     : null,
             }),
         ],
+        // Sem UI de edição pra palettes[] ainda — preserva o que foi carregado em vez de
+        // descartar (ver _loadedPalettes).
+        Palettes = _loadedPalettes,
     };
 
     /// <summary>Roda a mesma validação que o resto do app usa (RF-02) e popula <see cref="ValidationErrors"/>.</summary>

@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using OttoRice.Common;
+using OttoRice.Features.ThemeImport.Models;
 using OttoRice.Features.ThemeInstall;
 using OttoRice.Features.ThemeUninstall;
 
@@ -29,6 +30,8 @@ public partial class InstalledThemesViewModel(
     [NotifyCanExecuteChangedFor(nameof(ActivateCommand))]
     [NotifyCanExecuteChangedFor(nameof(ReapplyCommand))]
     [NotifyCanExecuteChangedFor(nameof(UninstallCommand))]
+    [NotifyCanExecuteChangedFor(nameof(SelectPaletteCommand))]
+    [NotifyCanExecuteChangedFor(nameof(ApplyPaletteCommand))]
     private bool _isBusy;
 
     [ObservableProperty]
@@ -123,6 +126,75 @@ public partial class InstalledThemesViewModel(
         item.Targets.Clear();
     }
 
+    /// <summary>
+    /// Abre o seletor de paleta (seção 13 da doc "OttoRice"): busca de novo o manifesto do
+    /// tema pra listar <c>palettes[]</c>. Tema sem paletas alternativas mostra um aviso em vez
+    /// de abrir a lista — não há botão separado "trocar paleta" só pra temas que a declaram, o
+    /// próprio clique já revela isso (evita buscar o manifesto de todo tema listado a cada
+    /// ATUALIZAR só pra saber se ele tem paletas).
+    /// </summary>
+    [RelayCommand(CanExecute = nameof(NotBusy))]
+    private async Task SelectPaletteAsync(InstalledThemeItem? item)
+    {
+        if (item is null)
+            return;
+
+        IsBusy = true;
+        try
+        {
+            var palettes = await reapply.FetchPalettesAsync(item.ThemeId);
+            if (!palettes.IsSuccess)
+            {
+                StatusMessage = $"❌ {palettes.Error}";
+                return;
+            }
+
+            if (palettes.Value!.Count == 0)
+            {
+                StatusMessage = $"'{item.ThemeName}' não declara paletas de cores alternativas.";
+                return;
+            }
+
+            item.Palettes.Clear();
+            item.Palettes.Add(new PaletteOption(null, "Padrão"));
+            foreach (var palette in palettes.Value)
+                item.Palettes.Add(new PaletteOption(palette.Id, palette.Name ?? palette.Id ?? "?"));
+
+            item.SelectedPalette = item.Palettes.FirstOrDefault(p => p.Id == item.ActivePaletteId)
+                ?? item.Palettes[0];
+            item.IsSelectingPalette = true;
+            StatusMessage = "";
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
+    /// <summary>Confirma a paleta escolhida em <see cref="SelectPaletteAsync"/> e reaplica o tema com ela.</summary>
+    [RelayCommand(CanExecute = nameof(NotBusy))]
+    private async Task ApplyPaletteAsync(InstalledThemeItem? item)
+    {
+        if (item is null || item.SelectedPalette is null)
+            return;
+
+        var paletteId = item.SelectedPalette.Id;
+        item.IsSelectingPalette = false;
+        await RunAsync(
+            progress => reapply.ApplyPaletteAsync(item.ThemeId, paletteId, progress),
+            $"✅ Paleta '{item.SelectedPalette.Name}' aplicada a '{item.ThemeName}'.");
+    }
+
+    /// <summary>Desiste da seleção de paleta aberta por <see cref="SelectPaletteAsync"/> sem aplicar nada.</summary>
+    [RelayCommand]
+    private void CancelPaletteSelection(InstalledThemeItem? item)
+    {
+        if (item is null)
+            return;
+        item.IsSelectingPalette = false;
+        item.Palettes.Clear();
+    }
+
     [RelayCommand(CanExecute = nameof(NotBusy))]
     private Task UninstallAsync(InstalledThemeItem? item) => item is null
         ? Task.CompletedTask
@@ -164,9 +236,29 @@ public sealed partial class InstalledThemeItem(string themeId, ThemeState state,
     public bool IsEnabled { get; } = state.IsEnabled;
     public DateTimeOffset InstalledAt { get; } = state.InstalledAt;
 
+    /// <summary>Id da paleta ativa no momento (seção 13 da doc "OttoRice"), ou <c>null</c> = padrão.</summary>
+    public string? ActivePaletteId { get; } = state.ActivePaletteId;
+
+    public string PaletteLabel => ActivePaletteId is null ? "Paleta: padrão" : $"Paleta: {ActivePaletteId}";
+
     public string StatusLabel => !IsActive
         ? "Instalado (inativo)"
         : IsEnabled ? "🟢 Ativo e ligado" : "⚪ Ativo e desligado";
+
+    /// <summary>Opções de paleta (buscadas sob demanda no primeiro clique em "PALETA"), pra
+    /// escolher antes de confirmar. Vazio até então.</summary>
+    public ObservableCollection<PaletteOption> Palettes { get; } = [];
+
+    [ObservableProperty]
+    private PaletteOption? _selectedPalette;
+
+    /// <summary>True entre o primeiro clique em "PALETA" (busca as opções) e o segundo
+    /// (confirma a escolha) — troca o botão por "APLICAR" + o seletor.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(PaletteButtonLabel))]
+    private bool _isSelectingPalette;
+
+    public string PaletteButtonLabel => IsSelectingPalette ? "CONFIRMAR PALETA" : "PALETA";
 
     /// <summary>Componentes do tema (buscados sob demanda no primeiro clique em "Reaplicar"),
     /// pra ligar/desligar antes de confirmar. Vazio até então.</summary>
@@ -180,3 +272,7 @@ public sealed partial class InstalledThemeItem(string themeId, ThemeState state,
 
     public string ReapplyButtonLabel => IsSelectingTargets ? "CONFIRMAR REAPLICAÇÃO" : "REAPLICAR";
 }
+
+/// <summary>Uma opção do seletor de paleta — <see cref="Id"/> nulo representa a paleta padrão
+/// do tema (<c>configs/</c>, sem override).</summary>
+public sealed record PaletteOption(string? Id, string Name);

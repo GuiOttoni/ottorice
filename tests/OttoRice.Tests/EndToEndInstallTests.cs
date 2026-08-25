@@ -192,6 +192,45 @@ public class EndToEndInstallTests : IDisposable
             context.WingetIdsInstalled);
     }
 
+    /// <summary>
+    /// Paletas alternativas (seção 13 da doc "OttoRice"): instala o catppuccin real com a
+    /// paleta "latte" ativa — glazewm/yasb/windows_terminal (que a paleta recolore) devem vir
+    /// de palettes/latte/configs, enquanto os cinco apps que a paleta NÃO cobre (fora de
+    /// escopo por design, ver examples/catppuccin/README.md) continuam vindo do configs/
+    /// padrão (Mocha) automaticamente — prova o fallback por target, não só por tema.
+    /// </summary>
+    [Fact]
+    public async Task Catppuccin_install_with_latte_palette_resolves_covered_targets_from_the_palette_dir()
+    {
+        var manifestJson = await File.ReadAllTextAsync(
+            Path.Combine(CatppuccinThemeDir, ThemeFetcher.ManifestFileName));
+        var manifest = ManifestValidator.Parse(manifestJson);
+        Assert.True(manifest.IsSuccess, manifest.Error);
+        Assert.Contains(manifest.Value!.Palettes, p => p.Id == "latte");
+
+        var context = new InstallContext
+        {
+            Manifest = manifest.Value!,
+            ThemeDirectory = CatppuccinThemeDir,
+            PaletteId = "latte",
+        };
+        var result = await BuildPipeline().RunAsync(context);
+
+        Assert.True(result.IsSuccess, result.Error);
+
+        // Coberto pela paleta latte: veio de palettes/latte, não de configs/.
+        var glazeConfig = Path.Combine(_fakeUserProfile, ".glzr", "glazewm", "config.yaml");
+        Assert.Contains("#8839ef", await File.ReadAllTextAsync(glazeConfig)); // mauve (Latte)
+        Assert.DoesNotContain("#cba6f7", await File.ReadAllTextAsync(glazeConfig)); // mauve (Mocha)
+
+        var yasbCss = Path.Combine(_fakeUserProfile, ".config", "yasb", "styles.css");
+        Assert.Contains("#8839ef", await File.ReadAllTextAsync(yasbCss));
+
+        // Fora de escopo da paleta (vscode) — continua vindo do configs/ padrão (Mocha).
+        var vscodeSettings = Path.Combine(_sandbox, "roaming", "Code", "User", "settings.json");
+        Assert.True(File.Exists(vscodeSettings));
+    }
+
     [Fact]
     public async Task Example_theme_manifest_is_valid()
     {
