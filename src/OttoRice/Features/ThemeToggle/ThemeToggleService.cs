@@ -17,7 +17,9 @@ namespace OttoRice.Features.ThemeToggle;
 ///
 /// Comandos verificados (ago/2026): GlazeWM v3 `glazewm command wm-exit`,
 /// `wm-toggle-pause`, `glazewm start --config`; YASB `yasbc start|stop --silent` e
-/// `enable-autostart|disable-autostart`. O Zebar não tem stop por CLI — é encerrado
+/// `enable-autostart|disable-autostart`; Komorebi `komorebic start|stop --whkd` (fase 2,
+/// RF-10 — `stop` já restaura as janelas ocultas, então não precisa de fallback de kill
+/// por PID como o GlazeWM). O Zebar não tem stop por CLI — é encerrado
 /// pelos shutdown_commands do GlazeWM; o kill por PID abaixo é fallback, restrito à
 /// whitelist de nomes de processo (nunca kill por nome em massa).
 ///
@@ -62,6 +64,14 @@ public sealed class ThemeToggleService(
         {
             progress?.Invoke("Encerrando GlazeWM (as janelas voltam a ficar visíveis, mas não às posições originais)...");
             await TryRunAsync("glazewm", "command wm-exit", ct);
+        }
+
+        // Comando limpo de verdade (ao contrário do wm-exit do GlazeWM, `stop` restaura as
+        // janelas ocultas antes de sair) — sem necessidade de fallback de kill por PID.
+        if (state.ManagedApps.Contains("komorebi"))
+        {
+            progress?.Invoke("Encerrando Komorebi (restaura as janelas ocultas)...");
+            await TryRunAsync("komorebic", "stop --whkd", ct);
         }
 
         // De propósito: Flow Launcher (se gerenciado) não é encerrado aqui — só é iniciado em
@@ -127,6 +137,16 @@ public sealed class ThemeToggleService(
                 ? $"start --config \"{state.GlazeWmConfigPath}\""
                 : "start";
             runner.StartDetached(glazewm, args);
+        }
+
+        if (state.ManagedApps.Contains("komorebi"))
+        {
+            var komorebic = resolver.Resolve("komorebic");
+            if (komorebic is null)
+                return Result.Fail("Komorebi não encontrado — reinstale o tema ou verifique a instalação.");
+
+            progress?.Invoke("Iniciando Komorebi...");
+            runner.StartDetached(komorebic, "start --whkd");
         }
 
         if (state.ManagedApps.Contains("yasb"))

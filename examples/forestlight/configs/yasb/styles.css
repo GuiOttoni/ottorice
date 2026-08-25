@@ -1,0 +1,113 @@
+/* Forestlight — YASB Reborn (%USERPROFILE%\.config\yasb\styles.css)
+   Paleta: verde-floresta profundo + dourado (luz do sol filtrando pelas folhas —
+   sentido literal de "komorebi" em japonês).
+
+   Regra de nomenclatura de classe verificada em amnweb/yasb/src/core/widgets (ago/2026):
+   widgets do namespace 'yasb.*' recebem sufixo "-widget" na classe CSS real
+   (cpu-widget, memory-widget, volume-widget, power-menu-widget, systray, clock-widget);
+   widgets do namespace 'komorebi.*' NÃO levam esse sufixo — a classe é o próprio nome
+   ("komorebi-workspaces", "komorebi-active-layout"), igual ao padrão já confirmado para
+   'glazewm.*' nos temas GlazeWM deste repositório. */
+
+:root {
+    --bg: rgba(20, 30, 20, 0.85);      /* verde-floresta quase preto */
+    --border: #3a4d30;                  /* verde musgo */
+    --text: #e8e4d3;                    /* creme */
+    --text-dim: #a9b89a;                /* verde-cinza claro */
+    --accent: #d9a441;                  /* dourado — sol filtrando */
+    --accent-text: #1b2a1e;             /* texto sobre badges dourados */
+    --leaf: #7fa650;                    /* verde-folha, destaque secundário */
+}
+
+* {
+    font-size: 12px;
+    font-weight: 400;
+    font-family: "Segoe UI", "Segoe Fluent Icons";
+}
+
+.yasb-bar {
+    background-color: var(--bg);
+    border-bottom: 1px solid var(--border);
+    padding: 0 10px;
+}
+
+.tooltip {
+    background-color: rgba(20, 30, 20, 0.95);
+    border-radius: 4px;
+    color: var(--text);
+    padding: 5px 10px;
+    font-size: 12px;
+    margin-top: 4px;
+}
+
+.context-menu,
+.context-menu .menu-checkbox {
+    background-color: rgba(20, 30, 20, 0.9);
+    padding: 4px 0px;
+    color: var(--text);
+    font-size: 12px;
+}
+
+/* Komorebi — sem sufixo "-widget" (namespace komorebi.*). */
+.komorebi-workspaces {
+    padding: 0 6px;
+    margin: 4px 0;
+}
+.komorebi-workspaces .ws-btn {
+    color: var(--text-dim);
+    padding: 0 6px;
+    border-radius: 4px;
+}
+.komorebi-workspaces .ws-btn.populated {
+    color: var(--text);
+}
+.komorebi-workspaces .ws-btn.active {
+    color: var(--accent-text);
+    background-color: var(--accent);
+    font-weight: 600;
+}
+
+.komorebi-active-layout {
+    color: var(--leaf);
+    padding: 0 8px;
+    margin: 4px 2px;
+}
+.komorebi-active-layout:hover {
+    color: var(--accent);
+}
+
+/* YASB — todo widget yasb.* leva o sufixo "-widget". */
+.clock-widget {
+    color: var(--text);
+    font-weight: 600;
+    padding: 0 10px;
+}
+
+.systray {
+    padding: 0 8px;
+    margin: 4px 0;
+}
+
+.cpu-widget,
+.memory-widget,
+.volume-widget {
+    color: var(--text-dim);
+    padding: 0 8px;
+    margin: 4px 2px;
+    border-radius: 4px;
+}
+.cpu-widget:hover,
+.memory-widget:hover,
+.volume-widget:hover {
+    color: var(--accent);
+    background-color: rgba(217, 164, 65, 0.12);
+}
+
+.power-menu-widget {
+    color: var(--text-dim);
+    padding: 0 10px;
+    margin: 4px 4px 4px 0;
+}
+.power-menu-widget:hover {
+    color: var(--accent);
+}

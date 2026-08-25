@@ -26,6 +26,7 @@ public sealed class AppReloader(
             [ReloadAction.Yasb] = "yasb",
             [ReloadAction.Zebar] = "zebar",
             [ReloadAction.FlowLauncher] = "Flow.Launcher",
+            [ReloadAction.Komorebi] = "komorebi",
         };
 
     public string? ExpectedProcessName(ReloadAction action) => ProcessNames.GetValueOrDefault(action);
@@ -43,9 +44,47 @@ public sealed class AppReloader(
             // Flow Launcher não tem CLI de reload — a config é lida ao iniciar (ou já ao vivo).
             // Só precisa estar rodando: sobe se não estiver, não faz nada se já estiver.
             ReloadAction.FlowLauncher => StartIfNotRunning("Flow.Launcher"),
+            ReloadAction.Komorebi => await ReloadKomorebiAsync(ct),
             ReloadAction.None or ReloadAction.Wallpaper => Result.Ok(),
             _ => Result.Fail($"Ação de reload desconhecida: {action}"),
         };
+    }
+
+    /// <summary>
+    /// Komorebi não tem um comando de reload "a quente" para o komorebi.json atual — o
+    /// `reload-configuration` do komorebic é só para os formatos legados .ahk/.ps1
+    /// (confirmado no código-fonte do komorebic, ago/2026). O padrão real (documentado em
+    /// docs/installation.md do próprio projeto) é parar e iniciar de novo: `komorebic stop`
+    /// já restaura as janelas ocultas antes de sair, então é seguro repetir a cada reload —
+    /// mais limpo que o `wm-exit` do GlazeWM, que não restaura posição/tamanho.
+    /// </summary>
+    private async Task<Result> ReloadKomorebiAsync(CancellationToken ct)
+    {
+        var exePath = resolver.Resolve("komorebic");
+        if (exePath is null)
+        {
+            logger?.LogWarning("'komorebic' não encontrado (nem no PATH nem nos locais de instalação conhecidos).");
+            return Result.Fail("'komorebic' não encontrado (nem no PATH nem nos locais de instalação conhecidos).");
+        }
+
+        try
+        {
+            if (runner.FindProcessIds("komorebi").Count > 0)
+            {
+                var stop = await runner.RunAsync(exePath, "stop --whkd", ct);
+                logger?.LogInformation(
+                    "'{ExePath} stop --whkd' saiu com código {ExitCode} antes do reinício.", exePath, stop.ExitCode);
+            }
+
+            runner.StartDetached(exePath, "start --whkd");
+            logger?.LogInformation("Komorebi reiniciado (stop+start) via '{ExePath}'.", exePath);
+            return Result.Ok();
+        }
+        catch (Exception ex) when (ex is Win32Exception or InvalidOperationException)
+        {
+            logger?.LogError(ex, "Falha ao executar '{ExePath}'.", exePath);
+            return Result.Fail($"Falha ao executar '{exePath}': {ex.Message}");
+        }
     }
 
     private Result StartIfNotRunning(string exeName)

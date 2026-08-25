@@ -1,0 +1,23 @@
+{
+  "name": "Forestlight",
+  "background": "#142014",
+  "foreground": "#E8E4D3",
+  "cursorColor": "#D9A441",
+  "selectionBackground": "#3A4D30",
+  "black": "#142014",
+  "red": "#C96A4C",
+  "green": "#7FA650",
+  "yellow": "#D9A441",
+  "blue": "#5B8A72",
+  "purple": "#A98CC9",
+  "cyan": "#5FAF9C",
+  "white": "#E8E4D3",
+  "brightBlack": "#4A5D3A",
+  "brightRed": "#E08A6C",
+  "brightGreen": "#9FCF6E",
+  "brightYellow": "#F2C563",
+  "brightBlue": "#7BAF97",
+  "brightPurple": "#C4A8E8",
+  "brightCyan": "#7FCFB8",
+  "brightWhite": "#FFFFFF"
+}

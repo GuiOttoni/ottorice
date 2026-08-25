@@ -192,6 +192,44 @@ public class EndToEndInstallTests : IDisposable
             context.WingetIdsInstalled);
     }
 
+    private static string ForestlightThemeDir
+    {
+        get
+        {
+            var dir = new DirectoryInfo(AppContext.BaseDirectory);
+            while (dir is not null && !Directory.Exists(Path.Combine(dir.FullName, "examples")))
+                dir = dir.Parent;
+            Assert.NotNull(dir);
+            return Path.Combine(dir!.FullName, "examples", "forestlight");
+        }
+    }
+
+    /// <summary>
+    /// Quarto tema de exemplo, primeiro a usar Komorebi (fase 2, RF-10) em vez de GlazeWM —
+    /// cobre os dois arquivos de config do app "komorebi" (komorebi.json direto em
+    /// %USERPROFILE%, whkdrc em %USERPROFILE%\.config\, sem ConfigRoot compartilhado).
+    /// </summary>
+    [Fact]
+    public async Task Forestlight_full_install_writes_both_komorebi_config_files()
+    {
+        var manifestJson = await File.ReadAllTextAsync(
+            Path.Combine(ForestlightThemeDir, ThemeFetcher.ManifestFileName));
+        var manifest = ManifestValidator.Parse(manifestJson);
+        Assert.True(manifest.IsSuccess, manifest.Error);
+
+        var context = new InstallContext { Manifest = manifest.Value!, ThemeDirectory = ForestlightThemeDir };
+        var result = await BuildPipeline().RunAsync(context);
+
+        Assert.True(result.IsSuccess, result.Error);
+        Assert.True(File.Exists(Path.Combine(_fakeUserProfile, "komorebi.json")));
+        Assert.True(File.Exists(Path.Combine(_fakeUserProfile, ".config", "whkdrc")));
+        Assert.True(File.Exists(Path.Combine(_fakeUserProfile, ".config", "yasb", "config.yaml")));
+        _wallpaper.Received(1).Set(Path.Combine(ForestlightThemeDir, "assets", "wallpaper.png"));
+        Assert.Equal(
+            ["LGUG2Z.komorebi", "LGUG2Z.whkd", "AmN.yasb"],
+            context.WingetIdsInstalled);
+    }
+
     /// <summary>
     /// Paletas alternativas (seção 13 da doc "OttoRice"): instala o catppuccin real com a
     /// paleta "latte" ativa — glazewm/yasb/windows_terminal (que a paleta recolore) devem vir

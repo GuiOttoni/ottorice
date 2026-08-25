@@ -24,9 +24,10 @@ public class ExecutableResolverTests : IDisposable
         return path;
     }
 
-    /// <summary>Resolver sem acesso a registro, com %ProgramFiles% apontando para o sandbox.</summary>
+    /// <summary>Resolver sem acesso a registro, com %ProgramFiles%/%LOCALAPPDATA% apontando para o sandbox.</summary>
     private ExecutableResolver Resolver() => new(
-        expand: p => p.Replace("%ProgramFiles%", Path.Combine(_dir, "ProgramFiles")),
+        expand: p => p.Replace("%ProgramFiles%", Path.Combine(_dir, "ProgramFiles"))
+                       .Replace("%LOCALAPPDATA%", Path.Combine(_dir, "LocalAppData")),
         isWindows: () => false);
 
     [Fact]
@@ -43,6 +44,23 @@ public class ExecutableResolverTests : IDisposable
     {
         var expected = CreateExe(@"ProgramFiles\YASB", "yasbc.exe");
         Assert.Equal(expected, Resolver().Resolve("yasbc"));
+    }
+
+    [Fact]
+    public void Finds_komorebic_in_winget_links_when_not_on_path()
+    {
+        // Diferente de GlazeWM/YASB, o WinGet costuma linkar komorebic/whkd em
+        // %LOCALAPPDATA%\Microsoft\WinGet\Links — mas o fallback existe porque o PATH do
+        // processo já capturado não pega instalações feitas na mesma sessão.
+        var expected = CreateExe(@"LocalAppData\Microsoft\WinGet\Links", "komorebic.exe");
+        Assert.Equal(expected, Resolver().Resolve("komorebic"));
+    }
+
+    [Fact]
+    public void Finds_whkd_in_winget_links_when_not_on_path()
+    {
+        var expected = CreateExe(@"LocalAppData\Microsoft\WinGet\Links", "whkd.exe");
+        Assert.Equal(expected, Resolver().Resolve("whkd"));
     }
 
     [Fact]

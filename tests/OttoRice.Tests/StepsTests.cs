@@ -296,11 +296,59 @@ public class AppReloaderTests
         Assert.Contains("não encontrado", result.Error);
     }
 
+    [Fact]
+    public async Task Komorebi_reload_stops_then_starts_when_already_running()
+    {
+        const string komorebicPath = @"C:\Program Files\komorebi\bin\komorebic.exe";
+        var runner = Substitute.For<IProcessRunner>();
+        var resolver = Substitute.For<IExecutableResolver>();
+        resolver.Resolve("komorebic").Returns(komorebicPath);
+        runner.FindProcessIds("komorebi").Returns([123]);
+        runner.RunAsync(komorebicPath, "stop --whkd", Arg.Any<CancellationToken>())
+              .Returns(new ProcessResult(0, "", ""));
+
+        var result = await new AppReloader(runner, resolver).ReloadAsync(ReloadAction.Komorebi);
+
+        Assert.True(result.IsSuccess);
+        await runner.Received(1).RunAsync(komorebicPath, "stop --whkd", Arg.Any<CancellationToken>());
+        runner.Received(1).StartDetached(komorebicPath, "start --whkd");
+    }
+
+    [Fact]
+    public async Task Komorebi_reload_only_starts_when_not_running()
+    {
+        const string komorebicPath = @"C:\Program Files\komorebi\bin\komorebic.exe";
+        var runner = Substitute.For<IProcessRunner>();
+        var resolver = Substitute.For<IExecutableResolver>();
+        resolver.Resolve("komorebic").Returns(komorebicPath);
+        runner.FindProcessIds("komorebi").Returns([]);
+
+        var result = await new AppReloader(runner, resolver).ReloadAsync(ReloadAction.Komorebi);
+
+        Assert.True(result.IsSuccess);
+        await runner.DidNotReceive().RunAsync(komorebicPath, "stop --whkd", Arg.Any<CancellationToken>());
+        runner.Received(1).StartDetached(komorebicPath, "start --whkd");
+    }
+
+    [Fact]
+    public async Task Komorebi_reload_reports_clearly_when_komorebic_not_found()
+    {
+        var runner = Substitute.For<IProcessRunner>();
+        var resolver = Substitute.For<IExecutableResolver>();
+        resolver.Resolve("komorebic").Returns((string?)null);
+
+        var result = await new AppReloader(runner, resolver).ReloadAsync(ReloadAction.Komorebi);
+
+        Assert.False(result.IsSuccess);
+        Assert.Contains("não encontrado", result.Error);
+    }
+
     [Theory]
     [InlineData(ReloadAction.GlazeWm, "glazewm")]
     [InlineData(ReloadAction.Yasb, "yasb")]
     [InlineData(ReloadAction.Zebar, "zebar")]
     [InlineData(ReloadAction.FlowLauncher, "Flow.Launcher")]
+    [InlineData(ReloadAction.Komorebi, "komorebi")]
     public void ExpectedProcessName_maps_persistent_actions(ReloadAction action, string expected)
     {
         var reloader = new AppReloader(Substitute.For<IProcessRunner>(), Substitute.For<IExecutableResolver>());

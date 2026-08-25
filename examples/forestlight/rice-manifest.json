@@ -1,0 +1,40 @@
+{
+  "schemaVersion": "1.0",
+  "themeId": "forestlight",
+  "name": "Forestlight",
+  "author": "ottorice",
+  "preview": "assets/preview.png",
+  "dependencies": [
+    { "wingetId": "LGUG2Z.komorebi" },
+    { "wingetId": "LGUG2Z.whkd" },
+    { "wingetId": "AmN.yasb" }
+  ],
+  "targets": [
+    {
+      "app": "komorebi",
+      "action": "override",
+      "source": "configs/komorebi/komorebi.json"
+    },
+    {
+      "app": "komorebi",
+      "action": "override",
+      "source": "configs/komorebi/whkdrc"
+    },
+    {
+      "app": "yasb",
+      "action": "override",
+      "source": "configs/yasb"
+    },
+    {
+      "app": "windows_terminal",
+      "action": "merge_scheme",
+      "source": "configs/wt-scheme.json",
+      "setAsDefault": true
+    },
+    {
+      "app": "wallpaper",
+      "action": "set",
+      "source": "assets/wallpaper.png"
+    }
+  ]
+}

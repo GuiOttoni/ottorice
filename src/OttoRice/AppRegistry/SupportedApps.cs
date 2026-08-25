@@ -10,6 +10,9 @@ public enum ReloadAction
     Yasb,
     Zebar,
     Wallpaper,
+    /// <summary>Sem comando de "reload a quente" real (reload-configuration do komorebic é
+    /// só para os formatos legados .ahk/.ps1) — a ação sempre para (se rodando) e reinicia.</summary>
+    Komorebi,
     /// <summary>App-launcher persistente (tipo Spotlight/Alfred/PowerToys Run) — não tem CLI de
     /// reload, só precisa estar rodando: inicia se não estiver, não faz nada se já estiver.</summary>
     FlowLauncher,
@@ -54,6 +57,19 @@ public static class SupportedApps
                 new HashSet<string> { "override" },
                 ReloadAction.Yasb,
                 ConfigRoot: @"%USERPROFILE%\.config\yasb"),
+
+            // Komorebi (fase 2, RF-10): config em duas partes (verificado ago/2026 contra
+            // LGUG2Z/komorebi docs/installation.md e komorebic/src/main.rs — não é o
+            // "komorebi.json + whkd.yaml" chutado na v1 desta doc): `komorebi.json` direto em
+            // %USERPROFILE% e `whkdrc` (sintaxe própria estilo skhd/sxhkd, não YAML apesar do
+            // nome comum "whkd.yaml" em alguns tutoriais) em %USERPROFILE%\.config\whkdrc.
+            // Sem ConfigRoot: os dois arquivos não compartilham diretório-base, então o tema
+            // sempre declara os dois arquivos individualmente (nunca um override de pasta).
+            ["komorebi"] = new(
+                "komorebi", "Komorebi",
+                [@"%USERPROFILE%\komorebi.json", @"%USERPROFILE%\.config\whkdrc"],
+                new HashSet<string> { "override" },
+                ReloadAction.Komorebi),
 
             ["windows_terminal"] = new(
                 "windows_terminal", "Windows Terminal",

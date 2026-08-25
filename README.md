@@ -54,6 +54,7 @@ partway through, everything gets rolled back automatically.
 | App | What OttoRice does |
 |---|---|
 | [GlazeWM](https://github.com/glzr-io/glazewm) v3 | Overrides `config.yaml` |
+| [Komorebi](https://github.com/LGUG2Z/komorebi) + [whkd](https://github.com/LGUG2Z/whkd) | Overrides `komorebi.json` + `whkdrc` |
 | [YASB Reborn](https://github.com/amnweb/yasb) | Overrides `config.yaml` + `styles.css` |
 | [Zebar](https://github.com/glzr-io/zebar) | Overrides its config folder |
 | Windows Terminal | Merges a color scheme in — never touches your existing profiles/shortcuts |
@@ -90,10 +91,11 @@ A theme is a Git repository (or a local folder) with a `rice-manifest.json` at i
 }
 ```
 
-See [`examples/`](examples/) for three complete reference themes of increasing scope —
-[`blackturq`](examples/blackturq) (minimal), [`voidhaze`](examples/voidhaze), and
-[`catppuccin`](examples/catppuccin) (all nine supported apps, Windhawk mods included) —
-each with its own README explaining the format and any gotchas.
+See [`examples/`](examples/) for four complete reference themes of increasing scope —
+[`blackturq`](examples/blackturq) (minimal), [`voidhaze`](examples/voidhaze),
+[`catppuccin`](examples/catppuccin) (all nine supported apps, Windhawk mods included), and
+[`forestlight`](examples/forestlight) (Komorebi + whkd instead of GlazeWM) — each with its
+own README explaining the format and any gotchas.
 
 ## Development
 

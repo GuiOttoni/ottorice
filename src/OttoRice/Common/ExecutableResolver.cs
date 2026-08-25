@@ -39,6 +39,13 @@ public sealed class ExecutableResolver : IExecutableResolver
             // Instalado pelo WinGet (Flow-Launcher.Flow-Launcher) em %LOCALAPPDATA%, não em
             // Program Files nem no PATH — confirmado numa instalação real da máquina de dev.
             ["Flow.Launcher"] = [@"%LOCALAPPDATA%\FlowLauncher\Flow.Launcher.exe"],
+            // Komorebi (LGUG2Z.komorebi) e whkd (LGUG2Z.whkd) são portable packages do WinGet
+            // — ao contrário de GlazeWM/YASB/Zebar, o WinGet os disponibiliza no PATH via um
+            // link em %LOCALAPPDATA%\Microsoft\WinGet\Links (mecanismo padrão do WinGet para
+            // pacotes "portable"). Esse fallback cobre o caso descrito na doc da classe: o
+            // PATH do processo já capturado antes de uma instalação feita na mesma sessão.
+            ["komorebic"] = [@"%LOCALAPPDATA%\Microsoft\WinGet\Links\komorebic.exe"],
+            ["whkd"] = [@"%LOCALAPPDATA%\Microsoft\WinGet\Links\whkd.exe"],
         };
 
     private readonly Func<string, string> _expand;

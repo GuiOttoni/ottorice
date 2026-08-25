@@ -1,0 +1,204 @@
+# Forestlight — YASB Reborn (%USERPROFILE%\.config\yasb\config.yaml)
+# Combo Komorebi + YASB (fase 2 do OttoRice, RF-10). Widgets do namespace `komorebi.*`
+# (verificados em amnweb/yasb/src/core/widgets/komorebi — não têm o sufixo "-widget" nas
+# classes CSS, ao contrário do namespace `yasb.*` — ver styles.css).
+watch_stylesheet: true
+watch_config: true
+debug: false
+
+bars:
+  status-bar:
+    enabled: true
+    screens: ['*']
+    class_name: 'yasb-bar'
+    alignment:
+      position: 'top'
+      center: false
+    blur_effect:
+      enabled: true
+      dark_mode: true
+      round_corners: false
+    # windows_app_bar: registra a barra como Windows AppBar (mesmo mecanismo da taskbar
+    # nativa) — sem isso o Komorebi tila a janela do YASB como uma janela comum. Mesma
+    # regra do GlazeWM (ver examples/catppuccin), verificada de novo para o Komorebi:
+    # o mecanismo de AppBar é do lado do YASB, não do window manager, então vale igual.
+    window_flags:
+      always_on_top: false
+      windows_app_bar: true
+    dimensions:
+      width: '100%'
+      height: 32
+    padding:
+      top: 0
+      left: 0
+      bottom: 0
+      right: 0
+    widgets:
+      left: ['komorebi_workspaces', 'komorebi_active_layout']
+      center: ['clock']
+      right: ['systray', 'cpu', 'memory', 'volume', 'power_menu']
+
+widgets:
+  # Namespace 'komorebi.*' — sem sufixo "-widget" na classe CSS (ao contrário de 'yasb.*').
+  komorebi_workspaces:
+    type: 'komorebi.workspaces.WorkspaceWidget'
+    options:
+      label_offline: 'Komorebi offline'
+      label_default_name: ''
+      label_zero_index: false
+      hide_empty_workspaces: true
+      hide_if_offline: false
+
+  komorebi_active_layout:
+    type: 'komorebi.active_layout.ActiveLayoutWidget'
+    options:
+      hide_if_offline: false
+      label: '{icon}'
+      layouts:
+        - 'bsp'
+        - 'columns'
+        - 'rows'
+        - 'grid'
+        - 'vertical_stack'
+        - 'horizontal_stack'
+      layout_icons:
+        bsp: '󰙀'
+        columns: '󰕴'
+        rows: '󱇘'
+        grid: '󰝘'
+        vertical_stack: '󰤼'
+        horizontal_stack: '󰤻'
+        monocle: '󰊓'
+        floating: '󰉖'
+        paused: '󰏤'
+        tiling: '󰖷'
+      callbacks:
+        on_left: 'toggle_layout_menu'
+        on_middle: 'toggle_tiling'
+        on_right: 'next_layout'
+      layout_menu:
+        blur: true
+        round_corners: true
+        alignment: 'left'
+        direction: 'down'
+        offset_top: true
+        show_layout_icons: true
+
+  clock:
+    type: 'yasb.clock.ClockWidget'
+    options:
+      label: '{%a, %d %b %H:%M}'
+      label_alt: '{%A, %d %B %Y %H:%M}'
+      timezones: []
+      calendar:
+        blur: true
+        round_corners: true
+        alignment: 'center'
+        direction: 'down'
+        extended: false
+        show_years: true
+        show_holidays: false
+        show_week_numbers: true
+      callbacks:
+        on_left: 'toggle_calendar'
+        on_middle: 'toggle_label'
+        on_right: 'context_menu'
+
+  systray:
+    type: 'yasb.systray.SystrayWidget'
+    options:
+      class_name: 'systray'
+      label_collapsed: ''
+      label_expanded: ''
+      label_position: 'right'
+      pin_click_modifier: 'ctrl'
+      show_unpinned: false
+      show_battery: false
+      show_volume: false
+      icon_size: 16
+      use_hook: true
+      show_in_popup: true
+      icons_per_row: 5
+      popup:
+        blur: true
+        round_corners: true
+        round_corners_type: 'normal'
+        border_color: 'None'
+        alignment: 'center'
+        direction: 'down'
+        offset_top: 6
+        offset_left: 0
+
+  cpu:
+    type: 'yasb.cpu.CpuWidget'
+    options:
+      label: '<span></span> {info[percent][total]}%'
+      label_alt: '<span></span> {info[freq][current]} MHz'
+      update_interval: 2000
+      menu:
+        enabled: true
+        show_graph: true
+        show_graph_grid: true
+        graph_history_size: 60
+      callbacks:
+        on_left: 'toggle_menu'
+        on_middle: 'do_nothing'
+        on_right: 'toggle_label'
+
+  memory:
+    type: 'yasb.memory.MemoryWidget'
+    options:
+      label: '<span></span> {virtual_mem_free}'
+      label_alt: '<span></span> VIRT: {virtual_mem_percent}% SWAP: {swap_mem_percent}%'
+      update_interval: 5000
+      callbacks:
+        on_left: 'toggle_menu'
+        on_middle: 'do_nothing'
+        on_right: 'toggle_label'
+      menu:
+        enabled: true
+        show_graph: true
+        show_graph_grid: true
+        graph_history_size: 60
+
+  volume:
+    type: 'yasb.volume.VolumeWidget'
+    options:
+      label: '<span>{icon}</span>'
+      label_alt: '<span>{icon}</span>{level}'
+      tooltip: true
+      icons:
+        muted: ''
+        '10': ''
+        '30': ''
+        '60': ''
+        '100': ''
+      callbacks:
+        on_left: 'toggle_volume_menu'
+        on_right: 'toggle_mute'
+
+  power_menu:
+    type: 'yasb.power_menu.PowerMenuWidget'
+    options:
+      label: '<span></span>'
+      uptime: true
+      show_user: true
+      menu_style: 'popup'
+      popup:
+        blur: true
+        round_corners: true
+        round_corners_type: 'normal'
+        border_color: 'System'
+        alignment: 'right'
+        direction: 'down'
+        offset_top: 6
+        offset_left: 0
+      profile_image_size: 64
+      buttons:
+        lock: ['', 'Bloquear']
+        signout: ['', 'Sair']
+        sleep: ['', 'Suspender']
+        hibernate: ['', 'Hibernar']
+        restart: ['', 'Reiniciar']
+        shutdown: ['', 'Desligar']
+        cancel: ['', 'Cancelar']

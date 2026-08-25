@@ -122,6 +122,47 @@ public class TargetPlannerTests : IDisposable
     }
 
     [Fact]
+    public void Komorebi_json_maps_directly_under_userprofile()
+    {
+        WriteThemeFile("configs/komorebi/komorebi.json");
+        var manifest = Manifest(new RiceTarget { App = "komorebi", Action = "override", Source = "configs/komorebi/komorebi.json" });
+
+        var plan = _planner.Build(manifest, _themeDir);
+
+        Assert.True(plan.IsSuccess, plan.Error);
+        Assert.Equal(Path.Combine(_fakeUserProfile, "komorebi.json"), Assert.Single(plan.Value!).TargetPath);
+    }
+
+    [Fact]
+    public void Whkdrc_maps_under_userprofile_config_folder()
+    {
+        WriteThemeFile("configs/komorebi/whkdrc");
+        var manifest = Manifest(new RiceTarget { App = "komorebi", Action = "override", Source = "configs/komorebi/whkdrc" });
+
+        var plan = _planner.Build(manifest, _themeDir);
+
+        Assert.True(plan.IsSuccess, plan.Error);
+        Assert.Equal(Path.Combine(_fakeUserProfile, ".config", "whkdrc"), Assert.Single(plan.Value!).TargetPath);
+    }
+
+    [Fact]
+    public void Komorebi_and_whkdrc_targets_resolve_independently_in_the_same_manifest()
+    {
+        WriteThemeFile("configs/komorebi/komorebi.json");
+        WriteThemeFile("configs/komorebi/whkdrc");
+        var manifest = Manifest(
+            new RiceTarget { App = "komorebi", Action = "override", Source = "configs/komorebi/komorebi.json" },
+            new RiceTarget { App = "komorebi", Action = "override", Source = "configs/komorebi/whkdrc" });
+
+        var plan = _planner.Build(manifest, _themeDir);
+
+        Assert.True(plan.IsSuccess, plan.Error);
+        Assert.Equal(2, plan.Value!.Count);
+        Assert.Contains(plan.Value!, op => op.TargetPath == Path.Combine(_fakeUserProfile, "komorebi.json"));
+        Assert.Contains(plan.Value!, op => op.TargetPath == Path.Combine(_fakeUserProfile, ".config", "whkdrc"));
+    }
+
+    [Fact]
     public void Vscode_file_override_maps_to_registry_config_path()
     {
         WriteThemeFile("configs/vscode-settings.json");

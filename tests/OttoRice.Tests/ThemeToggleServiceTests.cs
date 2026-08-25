@@ -174,6 +174,60 @@ public class ThemeToggleServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task TurnOff_stops_komorebi_when_managed()
+    {
+        var state = await SeedEnabledThemeAsync();
+        await _store.UpsertThemeAsync(state with { ManagedApps = [.. state.ManagedApps, "komorebi"] });
+
+        var result = await _toggle.TurnOffAsync();
+
+        Assert.True(result.IsSuccess, result.Error);
+        await _runner.Received(1).RunAsync("komorebic", "stop --whkd", Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task TurnOff_never_kills_komorebi_by_pid()
+    {
+        // Komorebi tem stop limpo (restaura janelas) — nunca deveria precisar de fallback
+        // de kill por PID como zebar/yasb.
+        var state = await SeedEnabledThemeAsync();
+        await _store.UpsertThemeAsync(state with { ManagedApps = [.. state.ManagedApps, "komorebi"] });
+        _runner.FindProcessIds("komorebi").Returns([9999]);
+
+        await _toggle.TurnOffAsync();
+
+        _runner.DidNotReceive().TryKill(9999);
+    }
+
+    [Fact]
+    public async Task TurnOn_starts_komorebi_when_managed()
+    {
+        var state = await SeedEnabledThemeAsync();
+        state = state with { ManagedApps = [.. state.ManagedApps, "komorebi"] };
+        await _store.UpsertThemeAsync(state with { IsEnabled = false });
+        _resolver.Resolve("komorebic").Returns("komorebic");
+
+        var result = await _toggle.TurnOnAsync();
+
+        Assert.True(result.IsSuccess, result.Error);
+        _runner.Received(1).StartDetached("komorebic", "start --whkd");
+    }
+
+    [Fact]
+    public async Task TurnOn_fails_clearly_when_komorebic_not_found()
+    {
+        var state = await SeedEnabledThemeAsync();
+        state = state with { ManagedApps = [.. state.ManagedApps, "komorebi"] };
+        await _store.UpsertThemeAsync(state with { IsEnabled = false });
+        _resolver.Resolve("komorebic").Returns((string?)null);
+
+        var result = await _toggle.TurnOnAsync();
+
+        Assert.False(result.IsSuccess);
+        Assert.Contains("Komorebi não encontrado", result.Error);
+    }
+
+    [Fact]
     public async Task Preserve_wallpaper_copies_file_into_local_vault()
     {
         var original = CreateFile("wall.png");
