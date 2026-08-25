@@ -23,6 +23,10 @@ public partial class MainWindow : Window
             {
                 await vm.Control.RefreshCommand.ExecuteAsync(null);
                 await vm.Backups.RefreshCommand.ExecuteAsync(null);
+                // Mesmo motivo do Control acima: sem isto a aba "Temas instalados" abre em
+                // branco até o usuário clicar em Atualizar, mesmo com temas instalados (visto
+                // no dogfooding — confirmado com Catppuccin Everywhere + Phosphor instalados).
+                await vm.InstalledThemes.RefreshCommand.ExecuteAsync(null);
             }
             catch (Exception ex)
             {

@@ -41,6 +41,15 @@ public partial class ThemeControlViewModel(
     [ObservableProperty]
     private string _statusMessage = "";
 
+    /// <summary>True entre o primeiro clique em "Desinstalar tema" e o segundo (confirmação) —
+    /// desinstalar é destrutivo (some com a config do tema, mesmo restaurando o backup) e não
+    /// tinha nenhuma confirmação; segue o mesmo padrão de dois cliques já usado em Reapply.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(UninstallButtonLabel))]
+    private bool _isConfirmingUninstall;
+
+    public string UninstallButtonLabel => IsConfirmingUninstall ? "CONFIRMAR DESINSTALAÇÃO" : "DESINSTALAR TEMA";
+
     /// <summary>Ferramentas do tema marcadas para remoção junto com ele.</summary>
     public ObservableCollection<RemovableToolViewModel> RemovableTools { get; } = [];
 
@@ -49,6 +58,8 @@ public partial class ThemeControlViewModel(
     public bool HasActiveTheme => Installed.HasActiveTheme;
     public string ThemeTitle => Installed.ActiveTheme?.ThemeName ?? "Nenhum tema aplicado pelo OttoRice.";
     public string StateLabel => Installed.ActiveTheme is not { } active ? "" : active.IsEnabled ? "🟢 Ligado" : "⚪ Desligado";
+
+    partial void OnInstalledChanged(InstalledThemes value) => IsConfirmingUninstall = false;
 
     private bool NotBusy() => !IsBusy;
 
@@ -127,6 +138,15 @@ public partial class ThemeControlViewModel(
     [RelayCommand(CanExecute = nameof(CanUninstall))]
     private async Task UninstallAsync()
     {
+        // Primeiro clique só arma a confirmação (some com a config do tema, mesmo restaurando
+        // o backup) — o segundo clique, com o botão já dizendo "CONFIRMAR...", executa de fato.
+        if (!IsConfirmingUninstall)
+        {
+            IsConfirmingUninstall = true;
+            return;
+        }
+
+        IsConfirmingUninstall = false;
         var themeId = Installed.ActiveThemeId!;
         var selected = RemovableTools.Where(t => t.RemoveIt).Select(t => t.WingetId).ToArray();
 
@@ -135,6 +155,9 @@ public partial class ThemeControlViewModel(
             "✅ Tema desinstalado e configurações anteriores restauradas.");
         await RefreshAsync();
     }
+
+    [RelayCommand]
+    private void CancelUninstall() => IsConfirmingUninstall = false;
 
     private async Task RunAsync(
         Func<Action<string>, Task<Common.Result>> operation, string successMessage)

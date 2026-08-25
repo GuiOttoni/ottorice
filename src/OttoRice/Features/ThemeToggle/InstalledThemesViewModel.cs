@@ -123,12 +123,34 @@ public partial class InstalledThemesViewModel(
         item.Targets.Clear();
     }
 
+    /// <summary>Desinstalar é destrutivo (some com a config do tema) e não tinha nenhuma
+    /// confirmação — primeiro clique só arma (troca o rótulo do botão pra "CONFIRMAR" e mostra
+    /// "CANCELAR"), segundo clique executa. Mesmo padrão de dois cliques do Reapply acima.</summary>
     [RelayCommand(CanExecute = nameof(NotBusy))]
-    private Task UninstallAsync(InstalledThemeItem? item) => item is null
-        ? Task.CompletedTask
-        : RunAsync(
+    private Task UninstallAsync(InstalledThemeItem? item)
+    {
+        if (item is null)
+            return Task.CompletedTask;
+
+        if (!item.IsConfirmingUninstall)
+        {
+            item.IsConfirmingUninstall = true;
+            return Task.CompletedTask;
+        }
+
+        item.IsConfirmingUninstall = false;
+        return RunAsync(
             progress => uninstall.UninstallAsync(item.ThemeId, null, progress),
             $"✅ '{item.ThemeName}' desinstalado.");
+    }
+
+    /// <summary>Desiste da confirmação de desinstalação armada por <see cref="UninstallAsync"/>.</summary>
+    [RelayCommand]
+    private void CancelUninstall(InstalledThemeItem? item)
+    {
+        if (item is not null)
+            item.IsConfirmingUninstall = false;
+    }
 
     private async Task RunAsync(Func<Action<string>, Task<Result>> operation, string successMessage)
     {
@@ -179,4 +201,12 @@ public sealed partial class InstalledThemeItem(string themeId, ThemeState state,
     private bool _isSelectingTargets;
 
     public string ReapplyButtonLabel => IsSelectingTargets ? "CONFIRMAR REAPLICAÇÃO" : "REAPLICAR";
+
+    /// <summary>True entre o primeiro clique em "Desinstalar" (arma a confirmação) e o segundo
+    /// (confirma) — ver <see cref="InstalledThemesViewModel.UninstallAsync"/>.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(UninstallButtonLabel))]
+    private bool _isConfirmingUninstall;
+
+    public string UninstallButtonLabel => IsConfirmingUninstall ? "CONFIRMAR" : "DESINSTALAR";
 }

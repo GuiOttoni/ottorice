@@ -14,6 +14,7 @@
         Icon="/Assets/ottorice.ico"
         Title="OttoRice"
         Width="1000" Height="680"
+        MinWidth="860" MinHeight="560"
         WindowStartupLocation="CenterScreen"
         Background="{DynamicResource BgDeepBrush}">
 
@@ -177,8 +178,13 @@
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>
-                            <Button Content="DESINSTALAR TEMA" Classes="btn-gold"
-                                    HorizontalAlignment="Left" Command="{Binding UninstallCommand}" />
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <Button Content="{Binding UninstallButtonLabel}" Classes="btn-gold"
+                                        HorizontalAlignment="Left" Command="{Binding UninstallCommand}" />
+                                <Button Content="CANCELAR" Classes="btn-secondary"
+                                        IsVisible="{Binding IsConfirmingUninstall}"
+                                        Command="{Binding CancelUninstallCommand}" />
+                            </StackPanel>
                         </StackPanel>
                     </Border>
 
@@ -235,8 +241,13 @@
                                                         IsVisible="{Binding IsSelectingTargets}"
                                                         Command="{Binding #InstalledThemesRoot.DataContext.CancelReapplySelectionCommand}"
                                                         CommandParameter="{Binding}" />
-                                                <Button Content="DESINSTALAR" Classes="btn-gold"
+                                                <Button Content="{Binding UninstallButtonLabel}" Classes="btn-gold"
                                                         Command="{Binding #InstalledThemesRoot.DataContext.UninstallCommand}"
+                                                        CommandParameter="{Binding}"
+                                                        ToolTip.Tip="Remove a config e o histórico deste tema (backup é restaurado)." />
+                                                <Button Content="CANCELAR" Classes="btn-secondary"
+                                                        IsVisible="{Binding IsConfirmingUninstall}"
+                                                        Command="{Binding #InstalledThemesRoot.DataContext.CancelUninstallCommand}"
                                                         CommandParameter="{Binding}" />
                                             </StackPanel>
                                         </Grid>
