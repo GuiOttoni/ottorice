@@ -84,6 +84,7 @@ public partial class App : Application
 
         services.AddTransient<InstallViewModel>();
         services.AddTransient<ThemeControlViewModel>();
+        services.AddTransient<InstalledThemesViewModel>();
         services.AddTransient<BackupsViewModel>();
         services.AddTransient<ThemeEditorViewModel>();
         services.AddTransient<MainViewModel>();

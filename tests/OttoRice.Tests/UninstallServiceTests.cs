@@ -108,19 +108,37 @@ public class UninstallServiceTests : IDisposable
     public async Task Active_enabled_theme_is_turned_off_before_removal()
     {
         await SeedThemeAsync("tema-a", "");
-        await _stateStore.WriteAsync(new ThemeState
+        await _stateStore.UpsertThemeAsync(new ThemeState
         {
-            ActiveThemeId = "tema-a",
-            ActiveThemeName = "Tema A",
+            ThemeId = "tema-a",
+            ThemeName = "Tema A",
             IsEnabled = true,
             ManagedApps = ["glazewm"],
-        });
+        }, makeActive: true);
 
         var result = await _uninstall.UninstallAsync("tema-a");
 
         Assert.True(result.IsSuccess, result.Error);
         await _runner.Received(1).RunAsync("glazewm", "command wm-exit", Arg.Any<CancellationToken>());
         Assert.False((await _stateStore.ReadAsync()).HasActiveTheme);
+    }
+
+    [Fact]
+    public async Task Uninstall_removes_only_the_targeted_theme_when_multiple_are_installed()
+    {
+        await SeedThemeAsync("tema-a", "");
+        await SeedThemeAsync("tema-b", "");
+        await _stateStore.UpsertThemeAsync(new ThemeState { ThemeId = "tema-a", ThemeName = "Tema A" });
+        await _stateStore.UpsertThemeAsync(
+            new ThemeState { ThemeId = "tema-b", ThemeName = "Tema B" }, makeActive: true);
+
+        var result = await _uninstall.UninstallAsync("tema-a");
+
+        Assert.True(result.IsSuccess, result.Error);
+        var installed = await _stateStore.ReadAsync();
+        Assert.False(installed.Themes.ContainsKey("tema-a"));
+        Assert.True(installed.Themes.ContainsKey("tema-b"));
+        Assert.Equal("tema-b", installed.ActiveThemeId);
     }
 
     [Fact]

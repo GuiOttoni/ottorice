@@ -10,7 +10,10 @@ using OttoRice.Common;
 namespace OttoRice.Features.ThemeToggle;
 
 /// <summary>
-/// Liga/desliga o tema ativo sem desinstalar nada (RF-15).
+/// Liga/desliga temas instalados sem desinstalar nada (RF-15). Desde o item 12.3 do plano de
+/// evolução, o app rastreia N temas instalados — todo método abaixo opera sobre "o tema
+/// alvo" (por padrão o tema atualmente ativo, <see cref="InstalledThemes.ActiveThemeId"/>,
+/// mas <see cref="ActivateAsync"/> permite trocar para qualquer outro tema instalado).
 ///
 /// Comandos verificados (ago/2026): GlazeWM v3 `glazewm command wm-exit`,
 /// `wm-toggle-pause`, `glazewm start --config`; YASB `yasbc start|stop --silent` e
@@ -32,9 +35,10 @@ public sealed class ThemeToggleService(
     private static readonly HashSet<string> KillableProcesses =
         new(StringComparer.OrdinalIgnoreCase) { "zebar", "yasb" };
 
-    public Task<ThemeState> GetStateAsync(CancellationToken ct = default) => stateStore.ReadAsync(ct);
+    public Task<InstalledThemes> GetInstalledThemesAsync(CancellationToken ct = default) => stateStore.ReadAsync(ct);
 
-    /// <summary>Pausa/retoma o tiling do GlazeWM sem derrubar nada (toggle leve).</summary>
+    /// <summary>Pausa/retoma o tiling do GlazeWM sem derrubar nada (toggle leve) — não é
+    /// tema-específico, atua sobre o GlazeWM em execução no momento.</summary>
     public async Task<Result> TogglePauseAsync(CancellationToken ct = default)
     {
         var result = await TryRunAsync("glazewm", "command wm-toggle-pause", ct);
@@ -43,10 +47,13 @@ public sealed class ThemeToggleService(
             : Result.Fail($"Não foi possível pausar o GlazeWM: {result.Error}");
     }
 
-    public async Task<Result> TurnOffAsync(Action<string>? progress = null, CancellationToken ct = default)
+    /// <summary>Desliga o tema indicado (por padrão, o tema ativo).</summary>
+    public async Task<Result> TurnOffAsync(
+        string? themeId = null, Action<string>? progress = null, CancellationToken ct = default)
     {
-        var state = await stateStore.ReadAsync(ct);
-        if (!state.HasActiveTheme)
+        var installed = await stateStore.ReadAsync(ct);
+        themeId ??= installed.ActiveThemeId;
+        if (themeId is null || !installed.Themes.TryGetValue(themeId, out var state))
             return Result.Fail("Nenhum tema ativo para desligar.");
         if (!state.IsEnabled)
             return Result.Fail("O tema já está desligado.");
@@ -86,15 +93,19 @@ public sealed class ThemeToggleService(
 
         RestoreOriginalWallpaper(state, progress);
 
-        await stateStore.WriteAsync(state with { IsEnabled = false }, ct);
-        logger?.LogInformation("Tema {ThemeId} desligado.", state.ActiveThemeId);
+        await stateStore.UpsertThemeAsync(state with { IsEnabled = false }, ct: ct);
+        logger?.LogInformation("Tema {ThemeId} desligado.", themeId);
         return Result.Ok();
     }
 
-    public async Task<Result> TurnOnAsync(Action<string>? progress = null, CancellationToken ct = default)
+    /// <summary>Liga o tema indicado (por padrão, o tema ativo). Não troca qual tema está
+    /// marcado como ativo — para trocar de tema, use <see cref="ActivateAsync"/>.</summary>
+    public async Task<Result> TurnOnAsync(
+        string? themeId = null, Action<string>? progress = null, CancellationToken ct = default)
     {
-        var state = await stateStore.ReadAsync(ct);
-        if (!state.HasActiveTheme)
+        var installed = await stateStore.ReadAsync(ct);
+        themeId ??= installed.ActiveThemeId;
+        if (themeId is null || !installed.Themes.TryGetValue(themeId, out var state))
             return Result.Fail("Nenhum tema ativo para ligar.");
         if (state.IsEnabled)
             return Result.Fail("O tema já está ligado.");
@@ -151,9 +162,36 @@ public sealed class ThemeToggleService(
             }
         }
 
-        await stateStore.WriteAsync(state with { IsEnabled = true }, ct);
-        logger?.LogInformation("Tema {ThemeId} ligado.", state.ActiveThemeId);
+        await stateStore.UpsertThemeAsync(state with { IsEnabled = true }, ct: ct);
+        logger?.LogInformation("Tema {ThemeId} ligado.", themeId);
         return Result.Ok();
+    }
+
+    /// <summary>Troca o tema ativo: desliga o tema atualmente ligado (se houver e estiver
+    /// ligado) e liga o tema indicado — composição de <see cref="TurnOffAsync"/> e
+    /// <see cref="TurnOnAsync"/>, sem nenhum caminho de ativação novo.</summary>
+    public async Task<Result> ActivateAsync(
+        string themeId, Action<string>? progress = null, CancellationToken ct = default)
+    {
+        var installed = await stateStore.ReadAsync(ct);
+        if (!installed.Themes.TryGetValue(themeId, out var target))
+            return Result.Fail($"Tema '{themeId}' não está instalado.");
+
+        if (installed.ActiveThemeId == themeId)
+            return target.IsEnabled
+                ? Result.Fail("Este tema já está ativo.")
+                : await TurnOnAsync(themeId, progress, ct);
+
+        if (installed.ActiveThemeId is not null &&
+            installed.Themes.TryGetValue(installed.ActiveThemeId, out var current) && current.IsEnabled)
+        {
+            var off = await TurnOffAsync(installed.ActiveThemeId, progress, ct);
+            if (!off.IsSuccess)
+                return Result.Fail($"Não foi possível desligar o tema atual: {off.Error}");
+        }
+
+        await stateStore.SetActiveThemeIdAsync(themeId, ct);
+        return await TurnOnAsync(themeId, progress, ct);
     }
 
     private void RestoreOriginalWallpaper(ThemeState state, Action<string>? progress)

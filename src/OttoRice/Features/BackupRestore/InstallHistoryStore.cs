@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
@@ -30,12 +31,19 @@ public sealed class InstallHistoryStore(string? rootOverride = null, ILogger<Ins
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "OttoRice"),
         "history.json");
 
+    /// <summary>Upsert por <see cref="InstallRecord.ThemeId"/>: instalar o mesmo tema de novo
+    /// (sem desinstalar antes) substitui o registro anterior em vez de duplicá-lo. Antes desta
+    /// correção, reinstalar produzia dois registros do mesmo tema e
+    /// <see cref="ReadAllAsync"/>/<c>FirstOrDefault(r =&gt; r.ThemeId == themeId)</c> em
+    /// <see cref="OttoRice.Features.ThemeUninstall.UninstallService"/> só enxergava o primeiro —
+    /// achado registrado na seção 12.5 do plano de evolução (docs/ottorice.md).</summary>
     public async Task AppendAsync(InstallRecord record, CancellationToken ct = default)
     {
-        var records = new List<InstallRecord>(await ReadAllAsync(ct)) { record };
+        var records = (await ReadAllAsync(ct)).Where(r => r.ThemeId != record.ThemeId).ToList();
+        records.Add(record);
         await AtomicFileWriter.WriteAllTextAsync(
             _historyPath, JsonSerializer.Serialize(records, JsonOptions), ct, logger);
-        logger?.LogInformation("Registro de instalação adicionado ao histórico: '{ThemeId}'.", record.ThemeId);
+        logger?.LogInformation("Registro de instalação gravado no histórico: '{ThemeId}'.", record.ThemeId);
     }
 
     public async Task RemoveAsync(string themeId, CancellationToken ct = default)

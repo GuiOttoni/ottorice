@@ -9,8 +9,9 @@ using OttoRice.Features.ThemeToggle;
 namespace OttoRice.Tests;
 
 /// <summary>
-/// ReapplyThemeService (seção 12.2 do plano de evolução): reaplica um tema já instalado
-/// rebaixando a origem salva e rodando uma pipeline reduzida (sem Dependência/Backup).
+/// ReapplyThemeService (seção 12.2/12.3 do plano de evolução): reaplica um tema já instalado
+/// (qualquer um, não só o ativo) rebaixando a origem salva e rodando uma pipeline reduzida
+/// (sem Dependência/Backup).
 /// </summary>
 public class ReapplyThemeServiceTests : IDisposable
 {
@@ -38,24 +39,25 @@ public class ReapplyThemeServiceTests : IDisposable
         new(themeDir, new RiceManifest { ThemeId = "t", Name = "T" });
 
     [Fact]
-    public async Task Fails_when_there_is_no_active_theme()
+    public async Task Fails_when_the_theme_is_not_installed()
     {
         var service = new ReapplyThemeService(_fetcher, new InstallPipeline([]), _store);
 
-        var result = await service.ReapplyAsync();
+        var result = await service.ReapplyAsync("t");
 
         Assert.False(result.IsSuccess);
-        Assert.Contains("Nenhum tema ativo", result.Error);
+        Assert.Contains("não está instalado", result.Error);
         await _fetcher.DidNotReceiveWithAnyArgs().FetchAsync(default!);
     }
 
     [Fact]
     public async Task Fails_with_actionable_message_when_theme_has_no_saved_source_url()
     {
-        await _store.WriteAsync(new ThemeState { ActiveThemeId = "t", ActiveThemeName = "T", IsEnabled = true });
+        await _store.UpsertThemeAsync(
+            new ThemeState { ThemeId = "t", ThemeName = "T", IsEnabled = true }, makeActive: true);
         var service = new ReapplyThemeService(_fetcher, new InstallPipeline([]), _store);
 
-        var result = await service.ReapplyAsync();
+        var result = await service.ReapplyAsync("t");
 
         Assert.False(result.IsSuccess);
         Assert.Contains("origem salva", result.Error);
@@ -64,15 +66,15 @@ public class ReapplyThemeServiceTests : IDisposable
     [Fact]
     public async Task Propagates_fetch_failure()
     {
-        await _store.WriteAsync(new ThemeState
+        await _store.UpsertThemeAsync(new ThemeState
         {
-            ActiveThemeId = "t", ActiveThemeName = "T", IsEnabled = true, SourceUrl = "https://github.com/o/r",
-        });
+            ThemeId = "t", ThemeName = "T", IsEnabled = true, SourceUrl = "https://github.com/o/r",
+        }, makeActive: true);
         _fetcher.FetchAsync("https://github.com/o/r", Arg.Any<CancellationToken>())
                 .Returns(Result<FetchedTheme>.Fail("sem rede"));
         var service = new ReapplyThemeService(_fetcher, new InstallPipeline([]), _store);
 
-        var result = await service.ReapplyAsync();
+        var result = await service.ReapplyAsync("t");
 
         Assert.False(result.IsSuccess);
         Assert.Contains("sem rede", result.Error);
@@ -83,19 +85,19 @@ public class ReapplyThemeServiceTests : IDisposable
     {
         var original = new ThemeState
         {
-            ActiveThemeId = "t", ActiveThemeName = "T", IsEnabled = true,
+            ThemeId = "t", ThemeName = "T", IsEnabled = true,
             SourceUrl = "https://github.com/o/r", GlazeWmConfigPath = @"C:\old\config.yaml",
         };
-        await _store.WriteAsync(original);
+        await _store.UpsertThemeAsync(original, makeActive: true);
         _fetcher.FetchAsync("https://github.com/o/r", Arg.Any<CancellationToken>())
                 .Returns(Result<FetchedTheme>.Ok(Fetched()));
         var failingPipeline = new InstallPipeline([new AlwaysFailStep()]);
         var service = new ReapplyThemeService(_fetcher, failingPipeline, _store);
 
-        var result = await service.ReapplyAsync();
+        var result = await service.ReapplyAsync("t");
 
         Assert.False(result.IsSuccess);
-        var saved = await _store.ReadAsync();
+        var saved = (await _store.ReadAsync()).Themes["t"];
         Assert.Equal(original.GlazeWmConfigPath, saved.GlazeWmConfigPath);
         Assert.Equal(original.SourceUrl, saved.SourceUrl);
         Assert.Empty(saved.ManagedApps);
@@ -113,14 +115,14 @@ public class ReapplyThemeServiceTests : IDisposable
     {
         var original = new ThemeState
         {
-            ActiveThemeId = "t",
-            ActiveThemeName = "T",
+            ThemeId = "t",
+            ThemeName = "T",
             IsEnabled = true,
             SourceUrl = "https://github.com/o/r",
             OriginalWallpaperPath = @"C:\old\wall.jpg",
             GlazeWmConfigPath = @"C:\stale\config.yaml",
         };
-        await _store.WriteAsync(original);
+        await _store.UpsertThemeAsync(original, makeActive: true);
         _fetcher.FetchAsync("https://github.com/o/r", Arg.Any<CancellationToken>())
                 .Returns(Result<FetchedTheme>.Ok(Fetched()));
 
@@ -128,18 +130,44 @@ public class ReapplyThemeServiceTests : IDisposable
         var pipeline = new InstallPipeline([new RecordingStep("Aplicação", log)]);
         var service = new ReapplyThemeService(_fetcher, pipeline, _store);
 
-        var result = await service.ReapplyAsync();
+        var result = await service.ReapplyAsync("t");
 
         Assert.True(result.IsSuccess, result.Error);
         Assert.Equal(["Aplicação"], log);
 
-        var saved = await _store.ReadAsync();
+        var saved = (await _store.ReadAsync()).Themes["t"];
         // Origem/wallpaper anterior preservados — não são responsabilidade do reaply.
         Assert.Equal(original.SourceUrl, saved.SourceUrl);
         Assert.Equal(original.OriginalWallpaperPath, saved.OriginalWallpaperPath);
         // Caminho derivado atualizado pela operação que a pipeline reduzida planejou.
         Assert.Equal("dest-config.yaml", saved.GlazeWmConfigPath);
         Assert.Contains("glazewm", saved.ManagedApps);
+    }
+
+    [Fact]
+    public async Task Can_reapply_an_installed_theme_that_is_not_the_active_one()
+    {
+        await _store.UpsertThemeAsync(new ThemeState
+        {
+            ThemeId = "ativo", ThemeName = "Ativo", IsEnabled = true, SourceUrl = "https://github.com/o/ativo",
+        }, makeActive: true);
+        var inactive = new ThemeState
+        {
+            ThemeId = "inativo", ThemeName = "Inativo", IsEnabled = false, SourceUrl = "https://github.com/o/inativo",
+        };
+        await _store.UpsertThemeAsync(inactive);
+
+        _fetcher.FetchAsync("https://github.com/o/inativo", Arg.Any<CancellationToken>())
+                .Returns(Result<FetchedTheme>.Ok(Fetched()));
+        var pipeline = new InstallPipeline([]);
+        var service = new ReapplyThemeService(_fetcher, pipeline, _store);
+
+        var result = await service.ReapplyAsync("inativo");
+
+        Assert.True(result.IsSuccess, result.Error);
+        var installed = await _store.ReadAsync();
+        Assert.Equal("ativo", installed.ActiveThemeId); // reaplicar não muda o tema ativo
+        Assert.False(installed.Themes["inativo"].IsEnabled);
     }
 
     public void Dispose() => Directory.Delete(_dir, recursive: true);

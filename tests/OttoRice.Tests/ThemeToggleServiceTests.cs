@@ -32,19 +32,19 @@ public class ThemeToggleServiceTests : IDisposable
         return path;
     }
 
-    private async Task<ThemeState> SeedEnabledThemeAsync(string? originalWallpaper = null)
+    private async Task<ThemeState> SeedEnabledThemeAsync(string? originalWallpaper = null, string themeId = "tema-x")
     {
         var state = new ThemeState
         {
-            ActiveThemeId = "tema-x",
-            ActiveThemeName = "Tema X",
+            ThemeId = themeId,
+            ThemeName = "Tema X",
             IsEnabled = true,
             OriginalWallpaperCopy = originalWallpaper,
-            ThemeWallpaperPath = CreateFile("theme-wall.png"),
+            ThemeWallpaperPath = CreateFile($"theme-wall-{themeId}.png"),
             GlazeWmConfigPath = @"C:\configs\glazewm.yaml",
             ManagedApps = ["glazewm", "yasb", "zebar", "wallpaper"],
         };
-        await _store.WriteAsync(state);
+        await _store.UpsertThemeAsync(state, makeActive: true);
         return state;
     }
 
@@ -61,7 +61,7 @@ public class ThemeToggleServiceTests : IDisposable
         await _runner.Received(1).RunAsync("yasbc", "stop --silent", Arg.Any<CancellationToken>());
         await _runner.Received(1).RunAsync("yasbc", "disable-autostart", Arg.Any<CancellationToken>());
         _wallpaper.Received(1).Set(original);
-        Assert.False((await _store.ReadAsync()).IsEnabled);
+        Assert.False((await _store.ReadAsync()).ActiveTheme!.IsEnabled);
     }
 
     [Fact]
@@ -79,7 +79,7 @@ public class ThemeToggleServiceTests : IDisposable
     public async Task TurnOn_starts_apps_with_saved_config_and_theme_wallpaper()
     {
         var state = await SeedEnabledThemeAsync();
-        await _store.WriteAsync(state with { IsEnabled = false });
+        await _store.UpsertThemeAsync(state with { IsEnabled = false });
 
         var result = await _toggle.TurnOnAsync();
 
@@ -88,7 +88,7 @@ public class ThemeToggleServiceTests : IDisposable
         _runner.Received(1).StartDetached("yasbc", "start --silent");
         await _runner.Received(1).RunAsync("yasbc", "enable-autostart", Arg.Any<CancellationToken>());
         _wallpaper.Received(1).Set(state.ThemeWallpaperPath!);
-        Assert.True((await _store.ReadAsync()).IsEnabled);
+        Assert.True((await _store.ReadAsync()).ActiveTheme!.IsEnabled);
     }
 
     [Fact]
@@ -134,7 +134,7 @@ public class ThemeToggleServiceTests : IDisposable
     {
         var state = await SeedEnabledThemeAsync();
         state = state with { ManagedApps = [.. state.ManagedApps, "flow_launcher"] };
-        await _store.WriteAsync(state with { IsEnabled = false });
+        await _store.UpsertThemeAsync(state with { IsEnabled = false });
         _resolver.Resolve("Flow.Launcher").Returns(@"C:\Users\x\AppData\Local\FlowLauncher\Flow.Launcher.exe");
         _runner.FindProcessIds("Flow.Launcher").Returns([]);
 
@@ -150,7 +150,7 @@ public class ThemeToggleServiceTests : IDisposable
     {
         var state = await SeedEnabledThemeAsync();
         state = state with { ManagedApps = [.. state.ManagedApps, "flow_launcher"] };
-        await _store.WriteAsync(state with { IsEnabled = false });
+        await _store.UpsertThemeAsync(state with { IsEnabled = false });
         _runner.FindProcessIds("Flow.Launcher").Returns([777]);
 
         var result = await _toggle.TurnOnAsync();
@@ -165,7 +165,7 @@ public class ThemeToggleServiceTests : IDisposable
     public async Task TurnOff_never_kills_flow_launcher()
     {
         var state = await SeedEnabledThemeAsync();
-        await _store.WriteAsync(state with { ManagedApps = [.. state.ManagedApps, "flow_launcher"] });
+        await _store.UpsertThemeAsync(state with { ManagedApps = [.. state.ManagedApps, "flow_launcher"] });
         _runner.FindProcessIds("Flow.Launcher").Returns([888]);
 
         await _toggle.TurnOffAsync();
@@ -177,12 +177,41 @@ public class ThemeToggleServiceTests : IDisposable
     public async Task Preserve_wallpaper_copies_file_into_local_vault()
     {
         var original = CreateFile("wall.png");
-        var copy = await _store.PreserveWallpaperAsync(original);
+        var copy = await _store.PreserveWallpaperAsync(original, "tema-x");
 
         Assert.NotNull(copy);
         Assert.True(File.Exists(copy));
         File.Delete(original);
         Assert.True(File.Exists(copy)); // cópia sobrevive ao sumiço do original
+    }
+
+    [Fact]
+    public async Task Activate_turns_off_current_active_theme_and_turns_on_the_target()
+    {
+        await SeedEnabledThemeAsync(themeId: "tema-a");
+        await _store.UpsertThemeAsync(new ThemeState
+        {
+            ThemeId = "tema-b",
+            ThemeName = "Tema B",
+            IsEnabled = false,
+            ManagedApps = ["glazewm"],
+        });
+
+        var result = await _toggle.ActivateAsync("tema-b");
+
+        Assert.True(result.IsSuccess, result.Error);
+        await _runner.Received(1).RunAsync("glazewm", "command wm-exit", Arg.Any<CancellationToken>());
+        var installed = await _store.ReadAsync();
+        Assert.Equal("tema-b", installed.ActiveThemeId);
+        Assert.True(installed.Themes["tema-b"].IsEnabled);
+        Assert.False(installed.Themes["tema-a"].IsEnabled);
+    }
+
+    [Fact]
+    public async Task Activate_unknown_theme_fails()
+    {
+        var result = await _toggle.ActivateAsync("nao-existe");
+        Assert.False(result.IsSuccess);
     }
 
     public void Dispose() => Directory.Delete(_dir, recursive: true);

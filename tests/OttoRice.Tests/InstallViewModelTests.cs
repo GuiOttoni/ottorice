@@ -194,11 +194,42 @@ public class InstallViewModelTests : IDisposable
         await vm.FetchCommand.ExecuteAsync(null);
         await vm.InstallCommand.ExecuteAsync(null);
 
-        var state = await stateStore.ReadAsync();
-        Assert.Equal("tema-vm", state.ActiveThemeId);
+        var installed = await stateStore.ReadAsync();
+        Assert.Equal("tema-vm", installed.ActiveThemeId);
+        var state = installed.Themes["tema-vm"];
         Assert.True(state.IsEnabled);
         Assert.Contains("glazewm", state.ManagedApps);
         Assert.Equal(@"C:\cfg\glazewm.yaml", state.GlazeWmConfigPath);
+    }
+
+    [Fact]
+    public async Task Reinstalling_the_same_theme_upserts_state_and_history_instead_of_duplicating()
+    {
+        var fetcher = Substitute.For<IThemeFetcher>();
+        fetcher.FetchAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+               .Returns(Result<FetchedTheme>.Ok(Theme(_dir)));
+
+        var stateStore = new ThemeStateStore(_dir);
+        var history = new InstallHistoryStore(_dir);
+        var vm = new InstallViewModel(
+            fetcher,
+            new InstallPipeline([new PopulatingStep()]),
+            history,
+            stateStore,
+            Substitute.For<IThemeFilePicker>());
+
+        vm.ThemeUrl = "https://github.com/owner/repo";
+        await vm.FetchCommand.ExecuteAsync(null);
+        await vm.InstallCommand.ExecuteAsync(null);
+        await vm.FetchCommand.ExecuteAsync(null);
+        await vm.InstallCommand.ExecuteAsync(null);
+
+        var records = await history.ReadAllAsync();
+        Assert.Single(records, r => r.ThemeId == "tema-vm");
+
+        var installed = await stateStore.ReadAsync();
+        Assert.Single(installed.Themes);
+        Assert.Equal("tema-vm", installed.ActiveThemeId);
     }
 
     private sealed class PopulatingStep : IInstallStep

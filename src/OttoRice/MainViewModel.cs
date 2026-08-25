@@ -13,10 +13,12 @@ public partial class MainViewModel : ObservableObject
     private string _statusMessage = "Pronto.";
 
     public MainViewModel(
-        InstallViewModel install, ThemeControlViewModel control, BackupsViewModel backups, ThemeEditorViewModel editor)
+        InstallViewModel install, ThemeControlViewModel control, InstalledThemesViewModel installedThemes,
+        BackupsViewModel backups, ThemeEditorViewModel editor)
     {
         Install = install;
         Control = control;
+        InstalledThemes = installedThemes;
         Backups = backups;
         Editor = editor;
 
@@ -24,12 +26,14 @@ public partial class MainViewModel : ObservableObject
         // como no OttoInfra — o usuário não perde o retorno ao trocar de aba.
         Observe(install, () => install.StatusMessage);
         Observe(control, () => control.StatusMessage);
+        Observe(installedThemes, () => installedThemes.StatusMessage);
         Observe(backups, () => backups.StatusMessage);
         Observe(editor, () => editor.StatusMessage);
     }
 
     public InstallViewModel Install { get; }
     public ThemeControlViewModel Control { get; }
+    public InstalledThemesViewModel InstalledThemes { get; }
     public BackupsViewModel Backups { get; }
     public ThemeEditorViewModel Editor { get; }
 

@@ -36,7 +36,7 @@ public partial class ThemeControlViewModel(
     [NotifyCanExecuteChangedFor(nameof(TurnOffCommand))]
     [NotifyCanExecuteChangedFor(nameof(ReapplyCommand))]
     [NotifyCanExecuteChangedFor(nameof(UninstallCommand))]
-    private ThemeState _state = ThemeState.Empty;
+    private InstalledThemes _installed = InstalledThemes.Empty;
 
     [ObservableProperty]
     private string _statusMessage = "";
@@ -46,9 +46,9 @@ public partial class ThemeControlViewModel(
 
     public ObservableCollection<string> Log { get; } = [];
 
-    public bool HasActiveTheme => State.HasActiveTheme;
-    public string ThemeTitle => State.ActiveThemeName ?? "Nenhum tema aplicado pelo OttoRice.";
-    public string StateLabel => !State.HasActiveTheme ? "" : State.IsEnabled ? "🟢 Ligado" : "⚪ Desligado";
+    public bool HasActiveTheme => Installed.HasActiveTheme;
+    public string ThemeTitle => Installed.ActiveTheme?.ThemeName ?? "Nenhum tema aplicado pelo OttoRice.";
+    public string StateLabel => Installed.ActiveTheme is not { } active ? "" : active.IsEnabled ? "🟢 Ligado" : "⚪ Desligado";
 
     private bool NotBusy() => !IsBusy;
 
@@ -58,11 +58,11 @@ public partial class ThemeControlViewModel(
         IsBusy = true;
         try
         {
-            State = await toggle.GetStateAsync();
+            Installed = await toggle.GetInstalledThemesAsync();
             RemovableTools.Clear();
-            if (State.ActiveThemeId is not null)
+            if (Installed.ActiveThemeId is not null)
             {
-                foreach (var tool in await uninstall.GetRemovableToolsAsync(State.ActiveThemeId))
+                foreach (var tool in await uninstall.GetRemovableToolsAsync(Installed.ActiveThemeId))
                     RemovableTools.Add(new RemovableToolViewModel(tool));
             }
         }
@@ -76,17 +76,17 @@ public partial class ThemeControlViewModel(
         }
     }
 
-    private bool CanTurnOn() => !IsBusy && State.HasActiveTheme && !State.IsEnabled;
+    private bool CanTurnOn() => !IsBusy && Installed.ActiveTheme is { IsEnabled: false };
 
     [RelayCommand(CanExecute = nameof(CanTurnOn))]
     private Task TurnOnAsync() => RunAsync(
-        progress => toggle.TurnOnAsync(progress), "✅ Tema ligado.");
+        progress => toggle.TurnOnAsync(Installed.ActiveThemeId, progress), "✅ Tema ligado.");
 
-    private bool CanTurnOff() => !IsBusy && State.HasActiveTheme && State.IsEnabled;
+    private bool CanTurnOff() => !IsBusy && Installed.ActiveTheme is { IsEnabled: true };
 
     [RelayCommand(CanExecute = nameof(CanTurnOff))]
     private Task TurnOffAsync() => RunAsync(
-        progress => toggle.TurnOffAsync(progress),
+        progress => toggle.TurnOffAsync(Installed.ActiveThemeId, progress),
         "✅ Tema desligado. As janelas voltaram a ficar visíveis, mas o GlazeWM não restaura as posições originais.");
 
     [RelayCommand(CanExecute = nameof(NotBusy))]
@@ -108,25 +108,26 @@ public partial class ThemeControlViewModel(
 
     // Permitido mesmo com o tema desligado (sobrescreve os arquivos de qualquer forma) — a
     // mensagem de sucesso avisa quando o tema está desligado, ver ReapplyAsync.
-    private bool CanReapply() => !IsBusy && State.HasActiveTheme;
+    private bool CanReapply() => !IsBusy && Installed.HasActiveTheme;
 
     [RelayCommand(CanExecute = nameof(CanReapply))]
     private Task ReapplyAsync()
     {
-        var wasEnabled = State.IsEnabled;
+        var themeId = Installed.ActiveThemeId!;
+        var wasEnabled = Installed.ActiveTheme!.IsEnabled;
         return RunAsync(
-            progress => reapply.ReapplyAsync(progress),
+            progress => reapply.ReapplyAsync(themeId, progress),
             wasEnabled
                 ? "✅ Tema reaplicado."
                 : "✅ Configurações reaplicadas (o tema está desligado — ligue para ver o efeito).");
     }
 
-    private bool CanUninstall() => !IsBusy && State.HasActiveTheme;
+    private bool CanUninstall() => !IsBusy && Installed.HasActiveTheme;
 
     [RelayCommand(CanExecute = nameof(CanUninstall))]
     private async Task UninstallAsync()
     {
-        var themeId = State.ActiveThemeId!;
+        var themeId = Installed.ActiveThemeId!;
         var selected = RemovableTools.Where(t => t.RemoveIt).Select(t => t.WingetId).ToArray();
 
         await RunAsync(
@@ -144,7 +145,7 @@ public partial class ThemeControlViewModel(
         {
             var result = await operation(Log.Add);
             StatusMessage = result.IsSuccess ? successMessage : $"❌ {result.Error}";
-            State = await toggle.GetStateAsync();
+            Installed = await toggle.GetInstalledThemesAsync();
         }
         catch (Exception ex)
         {

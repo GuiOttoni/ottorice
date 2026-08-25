@@ -54,11 +54,11 @@ public sealed class UninstallService(
         if (record is null)
             return Result.Fail($"Tema '{themeId}' não consta no histórico de instalações.");
 
-        var state = await stateStore.ReadAsync(ct);
-        if (state.ActiveThemeId == themeId && state.IsEnabled)
+        var installed = await stateStore.ReadAsync(ct);
+        if (installed.Themes.TryGetValue(themeId, out var themeState) && themeState.IsEnabled)
         {
-            progress?.Invoke("Desligando o tema ativo antes de remover...");
-            var off = await toggle.TurnOffAsync(progress, ct);
+            progress?.Invoke("Desligando o tema antes de remover...");
+            var off = await toggle.TurnOffAsync(themeId, progress, ct);
             if (!off.IsSuccess)
                 return Result.Fail($"Não foi possível desligar o tema: {off.Error}");
         }
@@ -96,8 +96,7 @@ public sealed class UninstallService(
         }
 
         await history.RemoveAsync(themeId, ct);
-        if (state.ActiveThemeId == themeId)
-            await stateStore.ClearAsync(ct);
+        await stateStore.RemoveThemeAsync(themeId, ct);
 
         logger?.LogInformation("Tema '{ThemeId}' ({ThemeName}) desinstalado.", themeId, record.ThemeName);
         progress?.Invoke($"Tema '{record.ThemeName}' removido.");

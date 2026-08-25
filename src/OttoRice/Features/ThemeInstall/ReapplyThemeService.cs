@@ -35,11 +35,14 @@ public sealed class ReapplyThemeService(
     ThemeStateStore stateStore,
     ILogger<ReapplyThemeService>? logger = null)
 {
-    public async Task<Result> ReapplyAsync(Action<string>? progress = null, CancellationToken ct = default)
+    /// <summary>Reaplica o tema indicado (qualquer tema instalado, não só o ativo — seção 12.3
+    /// do plano de evolução generalizou este método para N temas).</summary>
+    public async Task<Result> ReapplyAsync(
+        string themeId, Action<string>? progress = null, CancellationToken ct = default)
     {
-        var state = await stateStore.ReadAsync(ct);
-        if (!state.HasActiveTheme)
-            return Result.Fail("Nenhum tema ativo para reaplicar.");
+        var installed = await stateStore.ReadAsync(ct);
+        if (!installed.Themes.TryGetValue(themeId, out var state))
+            return Result.Fail($"Tema '{themeId}' não está instalado.");
         if (string.IsNullOrEmpty(state.SourceUrl))
             return Result.Fail(
                 "Este tema não tem uma origem salva (foi instalado antes desta versão do OttoRice) — reinstale pela aba Instalar.");
@@ -64,16 +67,16 @@ public sealed class ReapplyThemeService(
         // preservando o que só a instalação/backup original sabe (wallpaper anterior etc.).
         var wallpaperOp = context.Operations.FirstOrDefault(op => op.Target.Action == "set");
         var glazeOp = context.Operations.FirstOrDefault(op => op.Target.App == "glazewm");
-        await stateStore.WriteAsync(state with
+        await stateStore.UpsertThemeAsync(state with
         {
             ThemeWallpaperPath = wallpaperOp?.SourcePath ?? state.ThemeWallpaperPath,
             GlazeWmConfigPath = glazeOp?.TargetPath ?? state.GlazeWmConfigPath,
             ManagedApps = context.Operations.Count > 0
                 ? [.. context.Operations.Select(op => op.Target.App!).Distinct()]
                 : state.ManagedApps,
-        }, ct);
+        }, ct: ct);
 
-        logger?.LogInformation("Tema {ThemeId} reaplicado.", state.ActiveThemeId);
+        logger?.LogInformation("Tema {ThemeId} reaplicado.", themeId);
         return Result.Ok();
     }
 }

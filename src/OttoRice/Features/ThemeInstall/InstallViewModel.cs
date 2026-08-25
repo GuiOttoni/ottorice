@@ -205,23 +205,27 @@ public partial class InstallViewModel(
     [RelayCommand(CanExecute = nameof(CanCancel))]
     private void Cancel() => _cts?.Cancel();
 
-    /// <summary>Registra o que o toggle (RF-15) precisa saber para ligar/desligar este tema depois.</summary>
+    /// <summary>Registra o que o toggle (RF-15) precisa saber para ligar/desligar este tema
+    /// depois — grava/atualiza a entrada deste tema (seção 12.3 do plano de evolução: N temas
+    /// podem estar instalados ao mesmo tempo) e marca este como o ativo.</summary>
     private async Task SaveThemeStateAsync(InstallContext context)
     {
         var wallpaperOp = context.Operations.FirstOrDefault(op => op.Target.Action == "set");
         var glazeOp = context.Operations.FirstOrDefault(op => op.Target.App == "glazewm");
+        var themeId = context.Manifest.ThemeId!;
 
-        await stateStore.WriteAsync(new ThemeState
+        await stateStore.UpsertThemeAsync(new ThemeState
         {
-            ActiveThemeId = context.Manifest.ThemeId,
-            ActiveThemeName = context.Manifest.Name,
+            ThemeId = themeId,
+            ThemeName = context.Manifest.Name,
             IsEnabled = true,
             SourceUrl = ThemeUrl,
             OriginalWallpaperPath = context.PreviousWallpaperPath,
-            OriginalWallpaperCopy = await stateStore.PreserveWallpaperAsync(context.PreviousWallpaperPath),
+            OriginalWallpaperCopy = await stateStore.PreserveWallpaperAsync(context.PreviousWallpaperPath, themeId),
             ThemeWallpaperPath = wallpaperOp?.SourcePath,
             GlazeWmConfigPath = glazeOp?.TargetPath,
             ManagedApps = [.. context.Operations.Select(op => op.Target.App!).Distinct()],
-        });
+            InstalledAt = DateTimeOffset.Now,
+        }, makeActive: true);
     }
 }
