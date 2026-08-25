@@ -2,11 +2,18 @@
    Paleta: fundo violeta-quase-preto (#0B0714), destaque ciano (#22D3EE),
    haze magenta (#3C145A). */
 
+/* Font-family precisa estar num seletor '*' — Qt QSS não cascateia font-family de
+   .yasb-bar pros widgets filhos (.wifi .icon, .volume .icon etc.) do jeito que CSS de
+   navegador cascatearia, então cada widget herdaria só a fonte padrão do Qt e um glyph
+   fora do Segoe UI (PUA da Segoe Fluent Icons) virava o ícone de "glyph ausente" do Qt.
+   Mesmo padrão usado em examples/catppuccin e examples/phosphor. */
+* {
+    font-family: "Segoe UI", "Segoe Fluent Icons", sans-serif;
+}
 .yasb-bar {
     background-color: rgba(11, 7, 20, 0.92);
-    /* Nerd Font necessária pros glyphs dos widgets (wifi/volume/bateria/power); cai pra
-       Segoe UI normalmente se não estiver instalada, mas os ícones somem/viram caixas. */
-    font-family: "JetBrainsMono NFP", "Segoe UI", sans-serif;
+    /* Só Segoe UI / Segoe Fluent Icons — ambos já vêm com o Windows 11, sem depender de
+       Nerd Font instalada (ver README: glyphs trocados pra codepoints Segoe Fluent Icons). */
     font-size: 13px;
     color: #D6C9F0;
 }

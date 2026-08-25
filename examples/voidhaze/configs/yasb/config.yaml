@@ -75,7 +75,7 @@ widgets:
   clock:
     type: 'yasb.clock.ClockWidget'
     options:
-      label: '<span></span> {%H:%M}'
+      label: '<span></span> {%H:%M}'
       label_alt: '{%A, %d %B %Y — %H:%M:%S}'
 
   cpu:
@@ -93,7 +93,7 @@ widgets:
   wifi:
     type: 'yasb.wifi.WifiWidget'
     options:
-      label: '<span>󰤨</span> {wifi_name}'
+      label: '<span></span> {wifi_name}'
       label_alt: '{wifi_name} {wifi_strength}%'
       update_interval: 5000
       callbacks:
@@ -105,12 +105,12 @@ widgets:
     options:
       label: '<span>{icon}</span> {level}%'
       label_alt: '{volume}'
-      volume_icons:
-        - ''
-        - ''
-        - ''
-        - ''
-        - ''
+      icons:
+        muted: ''
+        '10': ''
+        '30': ''
+        '60': ''
+        '100': ''
       callbacks:
         on_right: 'exec cmd.exe /c start ms-settings:sound'
 
@@ -119,21 +119,28 @@ widgets:
     options:
       label: '<span>{icon}</span> {percent}%'
       label_alt: 'tempo restante: {time_remaining}'
+      status_icons:
+        icon_charging: ''
+        icon_critical: ''
+        icon_low: ''
+        icon_medium: ''
+        icon_high: ''
+        icon_full: ''
       charging_options:
         icon_format: '{charging_icon}'
 
   power_menu:
     type: 'yasb.power_menu.PowerMenuWidget'
     options:
-      label: ''
+      label: ''
       uptime: true
       blur: true
       animation_duration: 200
       button_row: 5
       buttons:
-        shutdown: ['', 'Desligar']
-        restart: ['', 'Reiniciar']
-        signout: ['󰍃', 'Sair']
-        hibernate: ['', 'Hibernar']
-        sleep: ['⏾', 'Suspender']
-        cancel: ['', 'Cancelar']
+        shutdown: ['', 'Desligar']
+        restart: ['', 'Reiniciar']
+        signout: ['', 'Sair']
+        hibernate: ['', 'Hibernar']
+        sleep: ['', 'Suspender']
+        cancel: ['', 'Cancelar']

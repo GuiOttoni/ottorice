@@ -53,7 +53,7 @@ widgets:
   home:
     type: 'yasb.home.HomeWidget'
     options:
-      label: '<span></span>'
+      label: '<span></span>'
       menu_list:
         - { title: 'Home', path: '~' }
         - { title: 'Downloads', path: '~\Downloads' }
@@ -104,8 +104,8 @@ widgets:
     type: 'yasb.systray.SystrayWidget'
     options:
       class_name: 'systray'
-      label_collapsed: ''
-      label_expanded: ''
+      label_collapsed: ''
+      label_expanded: ''
       label_position: 'right'
       pin_click_modifier: 'ctrl'
       show_unpinned: false
@@ -128,7 +128,7 @@ widgets:
   open_meteo:
     type: 'yasb.open_meteo.OpenMeteoWidget'
     options:
-      label: '<span></span>{temp}'
+      label: '<span></span>{temp}'
       label_alt: '{location}: Min {min_temp}, Max {max_temp}, Humidity {humidity}'
       tooltip: true
       update_interval: 600
@@ -153,11 +153,11 @@ widgets:
       label_alt: '<span>{icon}</span>{level}'
       tooltip: true
       icons:
-        muted: ''
-        '10': ''
-        '30': ''
-        '60': ''
-        '100': ''
+        muted: ''
+        '10': ''
+        '30': ''
+        '60': ''
+        '100': ''
       callbacks:
         on_left: 'toggle_volume_menu'
         on_right: 'toggle_mute'
@@ -165,8 +165,8 @@ widgets:
   cpu:
     type: 'yasb.cpu.CpuWidget'
     options:
-      label: '<span></span> {info[percent][total]}%'
-      label_alt: '<span></span> {info[freq][current]} MHz'
+      label: '<span></span> {info[percent][total]}%'
+      label_alt: '<span></span> {info[freq][current]} MHz'
       update_interval: 2000
       menu:
         enabled: true
@@ -181,8 +181,8 @@ widgets:
   memory:
     type: 'yasb.memory.MemoryWidget'
     options:
-      label: '<span></span> {virtual_mem_free}'
-      label_alt: '<span></span> VIRT: {virtual_mem_percent}% SWAP: {swap_mem_percent}%'
+      label: '<span></span> {virtual_mem_free}'
+      label_alt: '<span></span> VIRT: {virtual_mem_percent}% SWAP: {swap_mem_percent}%'
       update_interval: 5000
       callbacks:
         on_left: 'toggle_menu'
@@ -197,7 +197,7 @@ widgets:
   power_menu:
     type: 'yasb.power_menu.PowerMenuWidget'
     options:
-      label: '<span></span>'
+      label: '<span></span>'
       uptime: true
       show_user: true
       menu_style: 'popup'
@@ -212,10 +212,10 @@ widgets:
         offset_left: 0
       profile_image_size: 64
       buttons:
-        lock: ['', 'Lock']
-        signout: ['', 'Sign out']
-        sleep: ['', 'Sleep']
-        hibernate: ['', 'Hibernate']
-        restart: ['', 'Restart']
-        shutdown: ['', 'Shut down']
-        cancel: ['', 'Cancel']
+        lock: ['', 'Lock']
+        signout: ['', 'Sign out']
+        sleep: ['', 'Sleep']
+        hibernate: ['', 'Hibernate']
+        restart: ['', 'Restart']
+        shutdown: ['', 'Shut down']
+        cancel: ['', 'Cancel']

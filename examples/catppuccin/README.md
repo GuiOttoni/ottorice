@@ -117,10 +117,12 @@ Catppuccin pela galeria de temas do próprio Flow Launcher (`Configurações > T
 
 ## Ícones dos widgets do YASB
 
-Os widgets `wifi`/`volume`/`battery`/`power_menu`/`clock`/`taskbar` usam glyphs de Nerd
-Font (como o `blackturq` e o `voidhaze`). Sem uma Nerd Font instalada (ex.:
-JetBrainsMono Nerd Font), os ícones aparecem como caixas vazias — a barra continua
-funcional, só sem os símbolos.
+Nota histórica: este tema já teve uma versão anterior ("Neos") cujos widgets `volume`/
+`power_menu`/`clock`/`taskbar` usavam glyphs de Nerd Font. A versão atual (ver seção
+abaixo) foi reescrita pra usar só Segoe UI/Segoe Fluent Icons — nenhum widget deste tema
+depende de Nerd Font instalada. `voidhaze` e `phosphor` também foram migrados pro mesmo
+esquema (Segoe Fluent Icons); só o `blackturq` continua sem ícones (labels de texto puro),
+por design.
 
 ## Visual do YASB — tema "WinUI11"
 
@@ -129,8 +131,7 @@ funcional, só sem os símbolos.
 visual flat, no estilo nativo do Windows 11 (widgets sem fundo permanente, só destaque no
 hover), recolorido pra paleta Catppuccin Mocha (fundo/texto/bordas Mocha, destaque em
 mauve `#cba6f7`). Só depende de Segoe UI/Segoe Fluent Icons, que já vêm com o Windows 11 —
-diferente dos outros widgets do tema (wifi/volume/battery/power_menu, listados acima), não
-precisa de Nerd Font. A instalação original é feita pelo `yasb_themes.exe` (Themes Manager
+não precisa de Nerd Font. A instalação original é feita pelo `yasb_themes.exe` (Themes Manager
 gráfico e interativo do YASB), mas o OttoRice não passa por ele — os arquivos crus do tema
 (config.yaml/styles.css) são baixados direto do repositório e aplicados como qualquer
 outro target do manifesto (`action: override`), sem nenhuma etapa manual. Únicas mudanças

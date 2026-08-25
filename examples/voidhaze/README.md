@@ -41,6 +41,16 @@ interface do Windhawk (mods habilitados manualmente, não um `settings.json`/con
 arquivo que o `FileOverrideApplier` pudesse copiar). Convive normalmente com o GlazeWM/YASB
 deste tema.
 
+## Ícones dos widgets do YASB
+
+Os widgets `wifi`/`volume`/`battery`/`power_menu`/`clock` usam glyphs de **Segoe Fluent
+Icons** (codepoints como `` pro wifi, ``-``/`` pro volume,
+``-`` pra bateria, ``/``/``/``/``/``/``
+pro menu de força) — essa fonte já vem com o Windows 11, então nenhum widget deste tema
+depende de Nerd Font instalada. (Versão anterior deste exemplo usava glyphs de Nerd Font
+— ex.: `JetBrainsMono NFP` — que renderizavam como caixas vazias sem a fonte instalada;
+corrigido pra usar o mesmo esquema Segoe Fluent Icons do `examples/catppuccin`.)
+
 ## Comparado ao windots
 
 Auditoria do [glazewm/config.yaml](https://github.com/ashish0kumar/windots/blob/main/.config/glazewm/config.yaml)
